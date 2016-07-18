@@ -1,4 +1,25 @@
-module Erl.Data.List where
+module Erl.Data.List
+  ( List
+  , nil
+  , cons
+  , (:)
+  , toUnfoldable
+  , fromFoldable
+  , singleton
+  , range
+  , (..)
+  , null
+  , length
+  , head
+  , last
+  , tail
+  , init
+  , uncons
+  , reverse
+  , concat
+  , concatMap
+  , filter
+  ) where
 
 import Prelude
 

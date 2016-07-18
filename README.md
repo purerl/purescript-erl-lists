@@ -24,6 +24,10 @@ evenLength lst =
 ```
 Instances are provided as per `Data.List`. Conversion to other datatypes can be achived with `toUnfoldable` and `fromFoldable`.
 
+## Documentation
+
+[Erl.Data.List](docs/Erl/Data/List.md)
+
 ## Licensing
 
 Much of this code is derived from [purescript-lists](https://github.com/purescript/purescript-lists).
