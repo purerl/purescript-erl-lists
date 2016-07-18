@@ -1,0 +1,25 @@
+{
+  "name": "purescript-erl-lists",
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "output"
+  ],
+  "dependencies": {
+    "purescript-prelude": "git://github.com/purerl/purescript-prelude.git#master",
+    "purescript-console": "git://github.com/purerl/purescript-console.git#master",
+    "purescript-foldable-traversable": "git://github.com/purerl/purescript-foldable-traversable.git#master",
+    "purescript-unfoldable": "git://github.com/purerl/purescript-unfoldable.git#master",
+    "purescript-tuples": "^1.0.0"
+  },
+  "devDependencies": {
+    "purescript-assert": "git://github.com/purerl/purescript-assert.git#master",
+    "purescript-partial": "git://github.com/purerl/purescript-partial.git#master",
+    "purescript-monoid": "^1.0.0"
+  },
+  "resolutions": {
+    "purescript-foldable-traversable": "master",
+    "purescript-prelude": "master"
+  }
+}
