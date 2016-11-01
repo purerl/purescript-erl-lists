@@ -7,19 +7,20 @@
     "output"
   ],
   "dependencies": {
-    "purescript-prelude": "git://github.com/purerl/purescript-prelude.git#master",
-    "purescript-console": "git://github.com/purerl/purescript-console.git#master",
-    "purescript-foldable-traversable": "git://github.com/purerl/purescript-foldable-traversable.git#master",
-    "purescript-unfoldable": "git://github.com/purerl/purescript-unfoldable.git#master",
-    "purescript-tuples": "^1.0.0"
+    "purescript-prelude": "git://github.com/purerl/purescript-prelude.git#2.1.0-erl",
+    "purescript-console": "git://github.com/purerl/purescript-console.git#2.0.0-erl",
+    "purescript-foldable-traversable": "git://github.com/purerl/purescript-foldable-traversable.git#2.0.0-erl",
+    "purescript-unfoldable": "git://github.com/purerl/purescript-unfoldable.git#2.0.0-erl",
+    "purescript-tuples": "^3.0.0"
   },
   "devDependencies": {
-    "purescript-assert": "git://github.com/purerl/purescript-assert.git#master",
-    "purescript-partial": "git://github.com/purerl/purescript-partial.git#master",
-    "purescript-monoid": "^1.0.0"
+    "purescript-assert": "git://github.com/purerl/purescript-assert.git#2.0.0-erl",
+    "purescript-partial": "git://github.com/purerl/purescript-partial.git#1.1.2-erl",
+    "purescript-monoid": "^2.0.0"
   },
   "resolutions": {
-    "purescript-foldable-traversable": "master",
-    "purescript-prelude": "master"
+    "purescript-partial": "1.1.2-erl",
+    "purescript-foldable-traversable": "2.0.0-erl",
+    "purescript-prelude": "2.1.0-erl"
   }
 }
