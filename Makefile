@@ -3,7 +3,7 @@
 all: ps erl
 
 ps:
-	pserlc 'test/**/*.purs' 'src/**/*.purs' 'bower_components/purescript-*/src/**/*.purs'
+	psc-package sources | xargs purs compile 'test/**/*.purs' 'src/**/*.purs'
 
 test: ps erl
 	erl -pa ebin -noshell -eval '(test_main:main())()' -eval 'init:stop()'

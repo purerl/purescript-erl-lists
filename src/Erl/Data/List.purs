@@ -36,7 +36,7 @@ import Data.Traversable (class Traversable, traverse, sequence)
 import Data.Tuple (Tuple(..))
 import Data.Unfoldable (class Unfoldable, unfoldr)
 
-foreign import data List :: * -> *
+foreign import data List :: Type -> Type
 
 foreign import nil :: forall a. List a
 

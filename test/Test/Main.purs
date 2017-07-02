@@ -1,11 +1,11 @@
 module Test.Main where
 
 import Prelude
-import Data.Maybe
-import Data.Tuple
-import Erl.Data.List
-import Data.Foldable
-import Data.Monoid.Additive
+import Data.Maybe (Maybe(..), fromJust, isNothing, maybe)
+import Data.Tuple (Tuple(..))
+import Erl.Data.List (List, concat, concatMap, cons, filter, fromFoldable, head, init, last, length, nil, null, range, singleton, tail, uncons, (..), (:))
+import Data.Foldable (foldMap, foldl)
+import Data.Monoid.Additive (Additive(..))
 import Control.Monad.Eff (Eff)
 import Control.Monad.Eff.Console (CONSOLE, log)
 import Data.Unfoldable (replicateA, replicate, unfoldr)
@@ -30,6 +30,7 @@ main = do
   assert $ length xs == 2
   assert $ length ys == 3
   assert $ length nil == 0
+
 
   testList
 
@@ -64,7 +65,7 @@ testList = do
 
   -- some
   -- many
-  
+
   log "null should return false for non-empty lists"
   assert $ null (l [1]) == false
   assert $ null (l [1, 2, 3]) == false
