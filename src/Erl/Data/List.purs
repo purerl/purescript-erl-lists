@@ -23,18 +23,17 @@ module Erl.Data.List
 
 import Prelude
 
-import Control.Alt (class Alt, (<|>))
+import Control.Alt (class Alt)
 import Control.Alternative (class Alternative)
-import Control.Lazy (class Lazy, defer)
 import Control.MonadPlus (class MonadPlus)
 import Control.MonadZero (class MonadZero)
 import Control.Plus (class Plus)
-import Data.Foldable (class Foldable, foldl, foldr, any, intercalate, foldMapDefaultL, foldMapDefaultR)
+import Data.Foldable (class Foldable, foldMapDefaultR, foldr, intercalate)
 import Data.Maybe (Maybe(..))
-import Data.Monoid (class Monoid, mempty)
 import Data.Traversable (class Traversable, traverse, sequence)
 import Data.Tuple (Tuple(..))
 import Data.Unfoldable (class Unfoldable, unfoldr)
+import Data.Unfoldable1 (class Unfoldable1)
 
 foreign import data List :: Type -> Type
 
@@ -624,6 +623,7 @@ instance eqList :: Eq a => Eq (List a) where
           Nothing, Nothing -> acc
           Just { head: x, tail: xs }, Just { head: y, tail: ys} -> go xs ys $ acc && (y == x)
           _, _ -> false
+         
 --
 -- instance ordList :: Ord a => Ord (List a) where
 --   compare xs ys = go xs ys
@@ -657,6 +657,13 @@ foreign import mapImpl :: forall a b. (a -> b) -> List a -> List b
 foreign import foldrImpl :: forall a b. (a -> b -> b) -> b -> List a -> b
 
 foreign import foldlImpl :: forall a b. (b -> a -> b) -> b -> List a -> b
+
+instance unfoldable1List :: Unfoldable1 List where
+  unfoldr1 f b = go b nil
+    where
+      go source memo = case f source of
+        Tuple one Nothing -> reverse (cons one memo)
+        Tuple one (Just rest) -> go rest (cons one memo)
 
 instance unfoldableList :: Unfoldable List where
   unfoldr f b = go b nil

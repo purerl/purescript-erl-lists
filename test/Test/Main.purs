@@ -1,19 +1,19 @@
 module Test.Main where
 
 import Prelude
-import Data.Maybe (Maybe(..), fromJust, isNothing, maybe)
-import Data.Tuple (Tuple(..))
-import Erl.Data.List (List, concat, concatMap, cons, filter, fromFoldable, head, init, last, length, nil, null, range, singleton, tail, uncons, (..), (:))
+
 import Data.Foldable (foldMap, foldl)
+import Data.Maybe (Maybe(..), fromJust, isNothing, maybe)
 import Data.Monoid.Additive (Additive(..))
-import Control.Monad.Eff (Eff)
-import Control.Monad.Eff.Console (CONSOLE, log)
+import Data.Tuple (Tuple(..))
 import Data.Unfoldable (replicateA, replicate, unfoldr)
+import Effect (Effect)
+import Effect.Console (log)
+import Erl.Data.List (List, concat, concatMap, cons, filter, fromFoldable, head, init, last, length, nil, null, range, singleton, tail, uncons, (..), (:))
 import Partial.Unsafe (unsafePartial)
-import Test.Assert (ASSERT, assert)
+import Test.Assert (assert)
 
-
-main :: forall e. Eff (console :: CONSOLE, assert :: ASSERT | e) Unit
+main :: Effect Unit
 main = do
   let xs = cons 1 (cons 2 nil)
   let ys = "a" : "b" : "c" : nil
@@ -38,7 +38,7 @@ main = do
   log "Tests passed!"
 
 -- tests from Data.List
-testList :: forall eff. Eff (assert :: ASSERT, console :: CONSOLE | eff) Unit
+testList :: Effect Unit
 testList = do
   let l = fromFoldable
 
