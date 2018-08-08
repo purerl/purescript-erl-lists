@@ -28,8 +28,10 @@ import Control.Alternative (class Alternative)
 import Control.MonadPlus (class MonadPlus)
 import Control.MonadZero (class MonadZero)
 import Control.Plus (class Plus)
+import Data.Eq (class Eq1, eq1)
 import Data.Foldable (class Foldable, foldMapDefaultR, foldr, intercalate)
 import Data.Maybe (Maybe(..))
+import Data.Ord (class Ord1, compare1)
 import Data.Traversable (class Traversable, traverse, sequence)
 import Data.Tuple (Tuple(..))
 import Data.Unfoldable (class Unfoldable, unfoldr)
@@ -615,27 +617,33 @@ instance showList :: Show a => Show (List a) where
   show xs = "(" <> intercalate " : " (show <$> xs) <> " : nil)"
 
 instance eqList :: Eq a => Eq (List a) where
-  eq xs ys = go xs ys true
+  eq = eq1
+
+instance eq1List :: Eq1 List where
+  eq1 xs ys = go xs ys true
     where
       go _ _ false = false
       go xs' ys' acc =
         case uncons xs', uncons ys' of
           Nothing, Nothing -> acc
-          Just { head: x, tail: xs }, Just { head: y, tail: ys} -> go xs ys $ acc && (y == x)
+          Just { head: x, tail: xs'' }, Just { head: y, tail: ys'' } -> go xs'' ys'' $ acc && (y == x)
           _, _ -> false
          
---
--- instance ordList :: Ord a => Ord (List a) where
---   compare xs ys = go xs ys
---     where
---     go Nil Nil = EQ
---     go Nil _ = LT
---     go _ Nil = GT
---     go (Cons x xs) (Cons y ys) =
---       case compare x y of
---         EQ -> go xs ys
---         other -> other
---
+instance ordList :: Ord a => Ord (List a) where
+  compare = compare1
+
+-- Adapted from https://hackage.haskell.org/package/base-4.4.1.0/docs/src/GHC-Classes.html
+instance ord1List :: Ord1 List where
+  compare1 xs ys =
+      case uncons xs, uncons ys of
+         Nothing, Nothing -> EQ
+         Nothing, _       -> LT
+         _, Nothing       -> GT
+         Just { head: x, tail: xs'' }, Just { head: y, tail: ys'' } ->
+           case compare x y of
+             EQ -> compare1 xs'' ys''
+             other -> other
+
 instance semigroupList :: Semigroup (List a) where
   append = appendImpl
 
