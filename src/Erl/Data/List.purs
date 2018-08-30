@@ -149,8 +149,8 @@ head = map _.head <<< uncons
 -- | Running time: `O(n)`.
 last :: forall a. List a -> Maybe a
 last list = case uncons list of
-  Just { head, tail } | null tail -> Just head
-  Just { tail } -> last tail
+  Just { head: h, tail: t } | null t -> Just h
+  Just { tail: t } -> last t
   _ -> Nothing
 
 -- | Get all but the first element of a list, or `Nothing` if the list is empty.
@@ -167,8 +167,8 @@ init lst | null lst = Nothing
 init lst = Just $ reverse $ go lst nil
   where
   go lst' acc = case uncons lst' of
-    Just { head, tail } | null tail -> acc
-    Just { head, tail } -> go tail $ head : acc
+    Just { head: _, tail: t } | null t -> acc
+    Just { head: h, tail: t } -> go t $ h : acc
     Nothing -> acc
 
 --
@@ -288,7 +288,7 @@ concatMap :: forall a b. (a -> List b) -> List a -> List b
 concatMap f list =
   case uncons list of
     Nothing -> nil
-    Just { head, tail } -> f head <> concatMap f tail
+    Just { head: h, tail: t } -> f h <> concatMap f t
 
 -- | Filter a list, keeping the elements which satisfy a predicate function.
 -- |
@@ -684,11 +684,11 @@ instance traversableList :: Traversable List where
   traverse f lst =
     case uncons lst of
       Nothing -> pure nil
-      Just { head, tail } -> cons <$> f head <*> traverse f tail
+      Just { head: h, tail: t } -> cons <$> f h <*> traverse f t
   sequence lst =
     case uncons lst of
       Nothing -> pure nil
-      Just { head, tail } -> cons <$> head <*> sequence tail
+      Just { head: h, tail: t } -> cons <$> h <*> sequence t
 
 instance applyList :: Apply List where
   apply list xs =
