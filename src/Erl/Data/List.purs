@@ -18,6 +18,8 @@ module Erl.Data.List
   , reverse
   , concat
   , concatMap
+  , mapMaybe
+  , catMaybes
   , filter
   ) where
 
@@ -28,7 +30,10 @@ import Control.Alternative (class Alternative)
 import Control.MonadPlus (class MonadPlus)
 import Control.MonadZero (class MonadZero)
 import Control.Plus (class Plus)
+import Data.Compactable (class Compactable, separateDefault)
+import Data.Either (Either(..))
 import Data.Eq (class Eq1, eq1)
+import Data.Filterable (class Filterable)
 import Data.Foldable (class Foldable, foldMapDefaultR, foldr, intercalate)
 import Data.Maybe (Maybe(..))
 import Data.Ord (class Ord1, compare1)
@@ -36,6 +41,7 @@ import Data.Traversable (class Traversable, traverse, sequence)
 import Data.Tuple (Tuple(..))
 import Data.Unfoldable (class Unfoldable, unfoldr)
 import Data.Unfoldable1 (class Unfoldable1)
+import Data.Witherable (class Witherable, wiltDefault, witherDefault)
 
 foreign import data List :: Type -> Type
 
@@ -310,23 +316,24 @@ foreign import filter :: forall a. (a -> Boolean) -> List a -> List a
 --   xs' <- filterM p xs
 --   pure if b then Cons x xs' else xs'
 --
--- -- | Apply a function to each element in a list, keeping only the results which
--- -- | contain a value.
--- -- |
--- -- | Running time: `O(n)`
--- mapMaybe :: forall a b. (a -> Maybe b) -> List a -> List b
--- mapMaybe f = go Nil
---   where
---   go acc Nil = reverse acc
---   go acc (Cons x xs) =
---     case f x of
---       Nothing -> go acc xs
---       Just y -> go (Cons y acc) xs
---
--- -- | Filter a list of optional values, keeping only the elements which contain
--- -- | a value.
--- catMaybes :: forall a. List (Maybe a) -> List a
--- catMaybes = mapMaybe id
+-- | Apply a function to each element in a list, keeping only the results which
+-- | contain a value.
+-- |
+-- | Running time: `O(n)`
+mapMaybe :: forall a b. (a -> Maybe b) -> List a -> List b
+mapMaybe f = go nil
+  where
+  go acc l = case uncons l of
+    Nothing -> reverse acc
+    Just { head: x, tail: xs } -> 
+      case f x of
+        Nothing -> go acc xs
+        Just y -> go (y : acc) xs
+
+-- | Filter a list of optional values, keeping only the elements which contain
+-- | a value.
+catMaybes :: forall a. List (Maybe a) -> List a
+catMaybes = mapMaybe identity
 --
 --
 -- -- | Apply a function to each element and its index in a list starting at 0.
@@ -715,3 +722,34 @@ instance alternativeList :: Alternative List
 instance monadZeroList :: MonadZero List
 
 instance monadPlusList :: MonadPlus List
+
+instance compactableList :: Compactable List where
+  compact = catMaybes
+  separate xs = separateDefault xs
+
+instance filterableList :: Filterable List where
+  partitionMap :: forall a l r. (a -> Either l r) -> List a -> { left :: List l, right :: List r }
+  partitionMap p xs = foldr select { left: nil, right: nil } xs
+      where
+        select x { left, right } = case p x of
+                                     Left l -> { left: l : left, right }
+                                     Right r -> { left, right: r : right }
+  
+  partition :: forall a. (a -> Boolean) -> List a -> { no :: List a, yes :: List a }
+  partition p xs = foldr select { no: nil, yes: nil } xs
+      where
+        -- select :: (a -> Boolean) -> a -> { no :: List a, yes :: List a } -> { no :: List a, yes :: List a }
+        select x { no, yes } = if p x
+                                 then { no, yes: x : yes }
+                                 else { no: x : no, yes }
+
+  
+  filterMap :: forall a b. (a -> Maybe b) -> List a -> List b
+  filterMap = mapMaybe
+
+  filter :: forall a. (a -> Boolean) -> List a -> List a
+  filter = filter
+
+instance witherableList :: Witherable List where
+  wilt = wiltDefault
+  wither = witherDefault

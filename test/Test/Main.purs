@@ -2,14 +2,18 @@ module Test.Main where
 
 import Prelude
 
+import Data.Either (Either(..))
+import Data.Filterable (filterMap, partition, partitionMap, separate)
 import Data.Foldable (foldMap, foldl)
+import Data.Identity (Identity(..))
 import Data.Maybe (Maybe(..), fromJust, isNothing, maybe)
 import Data.Monoid.Additive (Additive(..))
 import Data.Tuple (Tuple(..))
 import Data.Unfoldable (replicateA, replicate, unfoldr)
+import Data.Witherable (wilt, wither)
 import Effect (Effect)
 import Effect.Console (log)
-import Erl.Data.List (List, concat, concatMap, cons, filter, fromFoldable, head, init, last, length, nil, null, range, singleton, tail, uncons, (..), (:))
+import Erl.Data.List (List, catMaybes, concat, concatMap, cons, filter, fromFoldable, head, init, last, length, mapMaybe, nil, null, range, singleton, tail, uncons, (..), (:))
 import Partial.Unsafe (unsafePartial)
 import Test.Assert (assert)
 
@@ -213,11 +217,11 @@ testList = do
   -- assert $ filterM (Just <<< odd) (range 0 10) == Just (l [1, 3, 5, 7, 9])
   -- assert $ filterM (const Nothing) (range 0 10) == Nothing
   --
-  -- log "mapMaybe should transform every item in an list, throwing out Nothing values"
-  -- assert $ mapMaybe (\x -> if x /= 0 then Just x else Nothing) (l [0, 1, 0, 0, 2, 3]) == l [1, 2, 3]
-  --
-  -- log "catMaybe should take an list of Maybe values and throw out Nothings"
-  -- assert $ catMaybes (l [Nothing, Just 2, Nothing, Just 4]) == l [2, 4]
+  log "mapMaybe should transform every item in an list, throwing out Nothing values"
+  assert $ mapMaybe (\x -> if x /= 0 then Just x else Nothing) (l [0, 1, 0, 0, 2, 3]) == l [1, 2, 3]
+  
+  log "catMaybe should take an list of Maybe values and throw out Nothings"
+  assert $ catMaybes (l [Nothing, Just 2, Nothing, Just 4]) == l [2, 4]
   --
   -- log "mapWithIndex should take a list of values and apply a function which also takes the index into account"
   -- assert $ mapWithIndex (\x ix -> x + ix) (fromFoldable [0, 1, 2, 3]) == fromFoldable [0, 2, 4, 6]
@@ -347,6 +351,41 @@ testList = do
   -- assert $ transpose Nil == (Nil :: List (List Int))
   -- log "transpose (singleton Nil) == Nil"
   -- assert $ transpose (singleton Nil) == (Nil :: List (List Int))
+
+
+  -- Tests from Filterable
+
+  log "Test filterableList instance" *> do
+    let testlist = (1 : 2 : 3 : 4 : 5 : 6 : 7 : 8 : 9 : nil)
+    assert $ filterMap pred testlist == (60 : 70 : 80 : 90 : nil)
+    assert $ filter (_ > 5) testlist == (6 : 7 : 8 : 9 : nil)
+    assert $ partition (_ > 5) testlist `testEqNoYes` { no: (1 : 2 : 3 : 4 : 5 : nil), yes: (6 : 7 : 8 : 9 : nil)}
+    assert $ (partitionMap Right $ (1 : 2 : 3 : 4 : 5 : nil)).right == (1 : 2 : 3 : 4 : 5 : nil)
+    assert $ (partitionMap Left $ (1 : 2 : 3 : 4 : 5 : nil)).left == (1 : 2 : 3 : 4 : 5 : nil)
+
+  log "Test compactableList instance" *> do
+    let testList = (Left 1 : Right 2 : Left 3 : Right 4 : Left 5 : Right 6 : Left 7 : Right 8 : nil)
+    let parts = separate testList
+    assert $ parts.left == (1 : 3 : 5 : 7 : nil)
+    assert $ parts.right == (2 : 4 : 6 : 8 : nil)
+
+  log "Test witherableList instance" *> do
+    let testlist = (1 : 2 : 3 : 4 : 5 : 6 : 7 : 8 : 9 : nil)
+    let resultWilt = wilt predE testlist
+    assert $ map _.right resultWilt == Identity (60 : 70 : 80 : 90 : nil)
+    assert $ map _.left resultWilt == Identity (1 : 2 : 3 : 4 : 5 : nil)
+    assert $ map _.right (wilt predE nil) == Identity nil
+
+    assert $ wither predM testlist == Identity (60 : 70 : 80 : 90 : nil)
+    assert $ wither predM nil == Identity nil
+
+   where
+    pred x = if x > 5 then Just (x * 10) else Nothing
+    predM x = if x > 5 then Identity (Just (x * 10)) else Identity Nothing
+    predE x = if x > 5 then Identity (Right (x * 10)) else Identity (Left x)
+
+    testEqNoYes :: ∀ a. (Ord a) => { no :: a, yes :: a } -> { no :: a, yes :: a } -> Boolean
+    testEqNoYes { no: n1, yes: y1 } { no: n2, yes: y2 } = n1 == n2 && y1 == y2
 
 step :: Int -> Maybe (Tuple Int Int)
 step 6 = Nothing

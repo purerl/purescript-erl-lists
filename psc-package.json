@@ -1,10 +1,11 @@
 {
     "name": "purescript-erl-lists",
-    "set": "erl-0.12.0-20180719",
+    "set": "erl-0.12.0-20181115",
     "source": "http://github.com/purerl/package-sets/",
     "depends": [
         "assert",
         "unfoldable",
+        "filterable",
         "tuples",
         "console",
         "prelude"
