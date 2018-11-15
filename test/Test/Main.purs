@@ -13,7 +13,7 @@ import Data.Unfoldable (replicateA, replicate, unfoldr)
 import Data.Witherable (wilt, wither)
 import Effect (Effect)
 import Effect.Console (log)
-import Erl.Data.List (List, catMaybes, concat, concatMap, cons, filter, fromFoldable, head, init, last, length, mapMaybe, nil, null, range, singleton, tail, uncons, (..), (:))
+import Erl.Data.List
 import Partial.Unsafe (unsafePartial)
 import Test.Assert (assert)
 
@@ -84,19 +84,19 @@ testList = do
 
   log "length should be stack-safe"
   void $ pure $ length (range 1 100000)
-  --
-  -- log "snoc should add an item to the end of an list"
-  -- assert $ l [1, 2, 3] `snoc` 4 == l [1, 2, 3, 4]
-  -- assert $ nil `snoc` 1 == l [1]
-  --
-  -- log "insert should add an item at the appropriate place in a sorted list"
-  -- assert $ insert 1.5 (l [1.0, 2.0, 3.0]) == l [1.0, 1.5, 2.0, 3.0]
-  -- assert $ insert 4 (l [1, 2, 3]) == l [1, 2, 3, 4]
-  -- assert $ insert 0 (l [1, 2, 3]) == l [0, 1, 2, 3]
-  --
-  -- log "insertBy should add an item at the appropriate place in a sorted list using the specified comparison"
-  -- assert $ insertBy (flip compare) 4 (l [1, 2, 3]) == l [4, 1, 2, 3]
-  -- assert $ insertBy (flip compare) 0 (l [1, 2, 3]) == l [1, 2, 3, 0]
+  
+  log "snoc should add an item to the end of an list"
+  assert $ l [1, 2, 3] `snoc` 4 == l [1, 2, 3, 4]
+  assert $ nil `snoc` 1 == l [1]
+  
+  log "insert should add an item at the appropriate place in a sorted list"
+  assert $ insert 1.5 (l [1.0, 2.0, 3.0]) == l [1.0, 1.5, 2.0, 3.0]
+  assert $ insert 4 (l [1, 2, 3]) == l [1, 2, 3, 4]
+  assert $ insert 0 (l [1, 2, 3]) == l [0, 1, 2, 3]
+  
+  log "insertBy should add an item at the appropriate place in a sorted list using the specified comparison"
+  assert $ insertBy (flip compare) 4 (l [1, 2, 3]) == l [4, 1, 2, 3]
+  assert $ insertBy (flip compare) 0 (l [1, 2, 3]) == l [1, 2, 3, 0]
 
   log "head should return a Just-wrapped first value of a non-empty list"
   assert $ head (l ["foo", "bar"]) == Just "foo"
@@ -132,76 +132,76 @@ testList = do
   let u2 = uncons (l [1, 2, 3])
   assert $ unsafePartial (fromJust u2).head == 1
   assert $ unsafePartial (fromJust u2).tail == l [2, 3]
-  --
-  -- log "(!!) should return Just x when the index is within the bounds of the list"
-  -- assert $ l [1, 2, 3] !! 0 == (Just 1)
-  -- assert $ l [1, 2, 3] !! 1 == (Just 2)
-  -- assert $ l [1, 2, 3] !! 2 == (Just 3)
-  --
-  -- log "(!!) should return Nothing when the index is outside of the bounds of the list"
-  -- assert $ l [1, 2, 3] !! 6 == Nothing
-  -- assert $ l [1, 2, 3] !! (-1) == Nothing
-  --
-  -- log "elemIndex should return the index of an item that a predicate returns true for in an list"
-  -- assert $ elemIndex 1 (l [1, 2, 1]) == Just 0
-  -- assert $ elemIndex 4 (l [1, 2, 1]) == Nothing
-  --
-  -- log "elemLastIndex should return the last index of an item in an list"
-  -- assert $ elemLastIndex 1 (l [1, 2, 1]) == Just 2
-  -- assert $ elemLastIndex 4 (l [1, 2, 1]) == Nothing
-  --
-  -- log "findIndex should return the index of an item that a predicate returns true for in an list"
-  -- assert $ findIndex (_ /= 1) (l [1, 2, 1]) == Just 1
-  -- assert $ findIndex (_ == 3) (l [1, 2, 1]) == Nothing
-  --
-  -- log "findLastIndex should return the last index of an item in an list"
-  -- assert $ findLastIndex (_ /= 1) (l [2, 1, 2]) == Just 2
-  -- assert $ findLastIndex (_ == 3) (l [2, 1, 2]) == Nothing
-  --
-  -- log "insertAt should add an item at the specified index"
-  -- assert $ (insertAt 0 1 (l [2, 3])) == Just (l [1, 2, 3])
-  -- assert $ (insertAt 1 1 (l [2, 3])) == Just (l [2, 1, 3])
-  -- assert $ (insertAt 2 1 (l [2, 3])) == Just (l [2, 3, 1])
-  --
-  -- log "insertAt should return Nothing if the index is out of range"
-  -- assert $ (insertAt 2 1 nil) == Nothing
-  --
-  -- log "deleteAt should remove an item at the specified index"
-  -- assert $ (deleteAt 0 (l [1, 2, 3])) == Just (l [2, 3])
-  -- assert $ (deleteAt 1 (l [1, 2, 3])) == Just (l [1, 3])
-  --
-  -- log "deleteAt should return Nothing if the index is out of range"
-  -- assert $ (deleteAt 1 nil) == Nothing
-  --
-  -- log "updateAt should replace an item at the specified index"
-  -- assert $ (updateAt 0 9 (l [1, 2, 3])) == Just (l [9, 2, 3])
-  -- assert $ (updateAt 1 9 (l [1, 2, 3])) == Just (l [1, 9, 3])
-  --
-  -- log "updateAt should return Nothing if the index is out of range"
-  -- assert $ (updateAt 1 9 nil) == Nothing
-  --
-  -- log "modifyAt should update an item at the specified index"
-  -- assert $ (modifyAt 0 (_ + 1) (l [1, 2, 3])) == Just (l [2, 2, 3])
-  -- assert $ (modifyAt 1 (_ + 1) (l [1, 2, 3])) == Just (l [1, 3, 3])
-  --
-  -- log "modifyAt should return Nothing if the index is out of range"
-  -- assert $ (modifyAt 1 (_ + 1) nil) == Nothing
-  --
-  -- log "alterAt should update an item at the specified index when the function returns Just"
-  -- assert $ (alterAt 0 (Just <<< (_ + 1)) (l [1, 2, 3])) == Just (l [2, 2, 3])
-  -- assert $ (alterAt 1 (Just <<< (_ + 1)) (l [1, 2, 3])) == Just (l [1, 3, 3])
-  --
-  -- log "alterAt should drop an item at the specified index when the function returns Nothing"
-  -- assert $ (alterAt 0 (const Nothing) (l [1, 2, 3])) == Just (l [2, 3])
-  -- assert $ (alterAt 1 (const Nothing) (l [1, 2, 3])) == Just (l [1, 3])
-  --
-  -- log "alterAt should return Nothing if the index is out of range"
-  -- assert $ (alterAt 1 (Just <<< (_ + 1)) nil) == Nothing
-  --
-  -- log "reverse should reverse the order of items in an list"
-  -- assert $ (reverse (l [1, 2, 3])) == l [3, 2, 1]
-  -- assert $ (reverse nil) == nil
-  --
+  
+  log "(!!) should return Just x when the index is within the bounds of the list"
+  assert $ l [1, 2, 3] !! 0 == (Just 1)
+  assert $ l [1, 2, 3] !! 1 == (Just 2)
+  assert $ l [1, 2, 3] !! 2 == (Just 3)
+  
+  log "(!!) should return Nothing when the index is outside of the bounds of the list"
+  assert $ l [1, 2, 3] !! 6 == Nothing
+  assert $ l [1, 2, 3] !! (-1) == Nothing
+  
+  log "elemIndex should return the index of an item that a predicate returns true for in an list"
+  assert $ elemIndex 1 (l [1, 2, 1]) == Just 0
+  assert $ elemIndex 4 (l [1, 2, 1]) == Nothing
+  
+  log "elemLastIndex should return the last index of an item in an list"
+  assert $ elemLastIndex 1 (l [1, 2, 1]) == Just 2
+  assert $ elemLastIndex 4 (l [1, 2, 1]) == Nothing
+  
+  log "findIndex should return the index of an item that a predicate returns true for in an list"
+  assert $ findIndex (_ /= 1) (l [1, 2, 1]) == Just 1
+  assert $ findIndex (_ == 3) (l [1, 2, 1]) == Nothing
+  
+  log "findLastIndex should return the last index of an item in an list"
+  assert $ findLastIndex (_ /= 1) (l [2, 1, 2]) == Just 2
+  assert $ findLastIndex (_ == 3) (l [2, 1, 2]) == Nothing
+  
+  log "insertAt should add an item at the specified index"
+  assert $ (insertAt 0 1 (l [2, 3])) == Just (l [1, 2, 3])
+  assert $ (insertAt 1 1 (l [2, 3])) == Just (l [2, 1, 3])
+  assert $ (insertAt 2 1 (l [2, 3])) == Just (l [2, 3, 1])
+  
+  log "insertAt should return Nothing if the index is out of range"
+  assert $ (insertAt 2 1 nil) == Nothing
+  
+  log "deleteAt should remove an item at the specified index"
+  assert $ (deleteAt 0 (l [1, 2, 3])) == Just (l [2, 3])
+  assert $ (deleteAt 1 (l [1, 2, 3])) == Just (l [1, 3])
+  
+  log "deleteAt should return Nothing if the index is out of range"
+  assert $ (deleteAt 1 (nil :: List Int)) == Nothing
+  
+  log "updateAt should replace an item at the specified index"
+  assert $ (updateAt 0 9 (l [1, 2, 3])) == Just (l [9, 2, 3])
+  assert $ (updateAt 1 9 (l [1, 2, 3])) == Just (l [1, 9, 3])
+  
+  log "updateAt should return Nothing if the index is out of range"
+  assert $ (updateAt 1 9 (nil :: List Int)) == Nothing
+  
+  log "modifyAt should update an item at the specified index"
+  assert $ (modifyAt 0 (_ + 1) (l [1, 2, 3])) == Just (l [2, 2, 3])
+  assert $ (modifyAt 1 (_ + 1) (l [1, 2, 3])) == Just (l [1, 3, 3])
+  
+  log "modifyAt should return Nothing if the index is out of range"
+  assert $ (modifyAt 1 (_ + 1) nil) == Nothing
+  
+  log "alterAt should update an item at the specified index when the function returns Just"
+  assert $ (alterAt 0 (Just <<< (_ + 1)) (l [1, 2, 3])) == Just (l [2, 2, 3])
+  assert $ (alterAt 1 (Just <<< (_ + 1)) (l [1, 2, 3])) == Just (l [1, 3, 3])
+  
+  log "alterAt should drop an item at the specified index when the function returns Nothing"
+  assert $ (alterAt 0 (const Nothing) (l [1, 2, 3])) == Just (l [2, 3])
+  assert $ (alterAt 1 (const Nothing) (l [1, 2, 3])) == Just (l [1, 3])
+  
+  log "alterAt should return Nothing if the index is out of range"
+  assert $ (alterAt 1 (Just <<< (_ + 1)) nil) == Nothing
+  
+  log "reverse should reverse the order of items in an list"
+  assert $ (reverse (l [1, 2, 3])) == l [3, 2, 1]
+  assert $ (reverse (nil :: List Int)) == nil
+  
   log "concat should join an list of lists"
   assert $ (concat (l [l [1, 2], l [3, 4]])) == l [1, 2, 3, 4]
   assert $ (concat (l [l [1], nil])) == l [1]
@@ -222,9 +222,9 @@ testList = do
   
   log "catMaybe should take an list of Maybe values and throw out Nothings"
   assert $ catMaybes (l [Nothing, Just 2, Nothing, Just 4]) == l [2, 4]
-  --
-  -- log "mapWithIndex should take a list of values and apply a function which also takes the index into account"
-  -- assert $ mapWithIndex (\x ix -> x + ix) (fromFoldable [0, 1, 2, 3]) == fromFoldable [0, 2, 4, 6]
+  
+  log "mapWithIndex should take a list of values and apply a function which also takes the index into account"
+  assert $ mapWithIndex (\x ix -> x + ix) (fromFoldable [0, 1, 2, 3]) == fromFoldable [0, 2, 4, 6]
   --
   -- log "sort should reorder a list into ascending order based on the result of compare"
   -- assert $ sort (l [1, 3, 2, 5, 6, 4]) == l [1, 2, 3, 4, 5, 6]
@@ -232,25 +232,25 @@ testList = do
   -- log "sortBy should reorder a list into ascending order based on the result of a comparison function"
   -- assert $ sortBy (flip compare) (l [1, 3, 2, 5, 6, 4]) == l [6, 5, 4, 3, 2, 1]
   --
-  -- log "take should keep the specified number of items from the front of an list, discarding the rest"
-  -- assert $ (take 1 (l [1, 2, 3])) == l [1]
-  -- assert $ (take 2 (l [1, 2, 3])) == l [1, 2]
-  -- assert $ (take 1 nil) == nil
-  --
-  -- log "takeWhile should keep all values that match a predicate from the front of an list"
-  -- assert $ (takeWhile (_ /= 2) (l [1, 2, 3])) == l [1]
-  -- assert $ (takeWhile (_ /= 3) (l [1, 2, 3])) == l [1, 2]
-  -- assert $ (takeWhile (_ /= 1) nil) == nil
-  --
-  -- log "drop should remove the specified number of items from the front of an list"
-  -- assert $ (drop 1 (l [1, 2, 3])) == l [2, 3]
-  -- assert $ (drop 2 (l [1, 2, 3])) == l [3]
-  -- assert $ (drop 1 nil) == nil
-  --
-  -- log "dropWhile should remove all values that match a predicate from the front of an list"
-  -- assert $ (dropWhile (_ /= 1) (l [1, 2, 3])) == l [1, 2, 3]
-  -- assert $ (dropWhile (_ /= 2) (l [1, 2, 3])) == l [2, 3]
-  -- assert $ (dropWhile (_ /= 1) nil) == nil
+  log "take should keep the specified number of items from the front of an list, discarding the rest"
+  assert $ (take 1 (l [1, 2, 3])) == l [1]
+  assert $ (take 2 (l [1, 2, 3])) == l [1, 2]
+  assert $ (take 1 nil) == (nil :: List Int)
+  
+  log "takeWhile should keep all values that match a predicate from the front of an list"
+  assert $ (takeWhile (_ /= 2) (l [1, 2, 3])) == l [1]
+  assert $ (takeWhile (_ /= 3) (l [1, 2, 3])) == l [1, 2]
+  assert $ (takeWhile (_ /= 1) nil) == (nil :: List Int)
+  
+  log "drop should remove the specified number of items from the front of an list"
+  assert $ (drop 1 (l [1, 2, 3])) == l [2, 3]
+  assert $ (drop 2 (l [1, 2, 3])) == l [3]
+  assert $ (drop 1 nil) == (nil :: List Int)
+  
+  log "dropWhile should remove all values that match a predicate from the front of an list"
+  assert $ (dropWhile (_ /= 1) (l [1, 2, 3])) == l [1, 2, 3]
+  assert $ (dropWhile (_ /= 2) (l [1, 2, 3])) == l [2, 3]
+  assert $ (dropWhile (_ /= 1) nil) == (nil :: List Int)
   --
   -- log "span should split an list in two based on a predicate"
   -- let spanResult = span (_ < 4) (l [1, 2, 3, 4, 5, 6, 7])
@@ -309,9 +309,9 @@ testList = do
   -- log "unzip should deconstruct a list of tuples into a tuple of lists"
   -- assert $ unzip (l [Tuple 1 "a", Tuple 2 "b", Tuple 3 "c"]) == Tuple (l [1, 2, 3]) (l ["a", "b", "c"])
   --
-  -- log "foldM should perform a fold using a monadic step function"
-  -- assert $ foldM (\x y -> Just (x + y)) 0 (range 1 10) == Just 55
-  -- assert $ foldM (\_ _ -> Nothing) 0 (range 1 10) == Nothing
+  log "foldM should perform a fold using a monadic step function"
+  assert $ foldM (\x y -> Just (x + y)) 0 (range 1 10) == Just 55
+  assert $ foldM (\_ _ -> Nothing) 0 (range 1 10) == Nothing
 
   log "foldl should be stack-safe"
   void $ pure $ foldl (+) 0 $ range 1 100000

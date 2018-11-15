@@ -10,17 +10,38 @@ module Erl.Data.List
   , (..)
   , null
   , length
+  , snoc
+  , insert
+  , insertBy
   , head
   , last
   , tail
   , init
   , uncons
+  , index
+  , (!!)
+  , elemIndex
+  , elemLastIndex
+  , findIndex
+  , findLastIndex
+  , insertAt
+  , deleteAt
+  , updateAt
+  , modifyAt
+  , alterAt
   , reverse
   , concat
   , concatMap
+  , filter
   , mapMaybe
   , catMaybes
-  , filter
+  , mapWithIndex
+  , slice
+  , take
+  , takeWhile
+  , drop
+  , dropWhile
+  , foldM
   ) where
 
 import Prelude
@@ -113,33 +134,34 @@ foreign import null :: forall a. List a -> Boolean
 -- | Running time: `O(n)`
 foreign import length :: forall a. List a -> Int
 
--- --------------------------------------------------------------------------------
--- -- Extending lists -------------------------------------------------------------
--- --------------------------------------------------------------------------------
-----
--- -- | Append an element to the end of a list, creating a new list.
--- -- |
--- -- | Running time: `O(2n)`
--- snoc :: forall a. List a -> a -> List a
--- snoc xs x = reverse (Cons x (reverse xs))
+--------------------------------------------------------------------------------
+-- Extending lists -------------------------------------------------------------
+--------------------------------------------------------------------------------
 --
--- -- | Insert an element into a sorted list.
--- -- |
--- -- | Running time: `O(n)`
--- insert :: forall a. Ord a => a -> List a -> List a
--- insert = insertBy compare
---
--- -- | Insert an element into a sorted list, using the specified function to
--- -- | determine the ordering of elements.
--- -- |
--- -- | Running time: `O(n)`
--- insertBy :: forall a. (a -> a -> Ordering) -> a -> List a -> List a
--- insertBy _ x Nil = Cons x Nil
--- insertBy cmp x ys@(Cons y ys') =
---   case cmp x y of
---     GT -> Cons y (insertBy cmp x ys')
---     _  -> Cons x ys
---
+-- | Append an element to the end of a list, creating a new list.
+-- |
+-- | Running time: `O(2n)`
+snoc :: forall a. List a -> a -> List a
+snoc xs x = reverse (x : reverse xs)
+
+-- | Insert an element into a sorted list.
+-- |
+-- | Running time: `O(n)`
+insert :: forall a. Ord a => a -> List a -> List a
+insert = insertBy compare
+
+-- | Insert an element into a sorted list, using the specified function to
+-- | determine the ordering of elements.
+-- |
+-- | Running time: `O(n)`
+insertBy :: forall a. (a -> a -> Ordering) -> a -> List a -> List a
+insertBy cmp x ys = case uncons ys of
+  Nothing -> x : nil
+  Just { head: y, tail: ys' } ->
+    case cmp x y of
+        GT -> y : (insertBy cmp x ys')
+        _  -> x : ys
+
 --------------------------------------------------------------------------------
 -- Non-indexed reads -----------------------------------------------------------
 --------------------------------------------------------------------------------
@@ -187,91 +209,100 @@ uncons = unconsImpl Just Nothing
 
 foreign import unconsImpl :: forall a b. (b -> Maybe b) -> Maybe b -> List a -> Maybe { head :: a, tail :: List a }
 
---
--- --------------------------------------------------------------------------------
--- -- Indexed operations ----------------------------------------------------------
--- --------------------------------------------------------------------------------
---
--- -- | Get the element at the specified index, or `Nothing` if the index is out-of-bounds.
--- -- |
--- -- | Running time: `O(n)` where `n` is the required index.
--- index :: forall a. List a -> Int -> Maybe a
--- index Nil _ = Nothing
--- index (Cons a _) 0 = Just a
--- index (Cons _ as) i = index as (i - 1)
---
--- -- | An infix synonym for `index`.
--- infixl 8 index as !!
---
--- -- | Find the index of the first element equal to the specified element.
--- elemIndex :: forall a. Eq a => a -> List a -> Maybe Int
--- elemIndex x = findIndex (_ == x)
---
--- -- | Find the index of the last element equal to the specified element.
--- elemLastIndex :: forall a. Eq a => a -> List a -> Maybe Int
--- elemLastIndex x = findLastIndex (_ == x)
---
--- -- | Find the first index for which a predicate holds.
--- findIndex :: forall a. (a -> Boolean) -> List a -> Maybe Int
--- findIndex fn = go 0
---   where
---   go :: Int -> List a -> Maybe Int
---   go n (Cons x xs) | fn x = Just n
---                    | otherwise = go (n + 1) xs
---   go _ Nil = Nothing
---
--- -- | Find the last index for which a predicate holds.
--- findLastIndex :: forall a. (a -> Boolean) -> List a -> Maybe Int
--- findLastIndex fn xs = ((length xs - 1) - _) <$> findIndex fn (reverse xs)
---
--- -- | Insert an element into a list at the specified index, returning a new
--- -- | list or `Nothing` if the index is out-of-bounds.
--- -- |
--- -- | Running time: `O(n)`
--- insertAt :: forall a. Int -> a -> List a -> Maybe (List a)
--- insertAt 0 x xs = Just (Cons x xs)
--- insertAt n x (Cons y ys) = Cons y <$> insertAt (n - 1) x ys
--- insertAt _ _ _  = Nothing
---
--- -- | Delete an element from a list at the specified index, returning a new
--- -- | list or `Nothing` if the index is out-of-bounds.
--- -- |
--- -- | Running time: `O(n)`
--- deleteAt :: forall a. Int -> List a -> Maybe (List a)
--- deleteAt 0 (Cons y ys) = Just ys
--- deleteAt n (Cons y ys) = Cons y <$> deleteAt (n - 1) ys
--- deleteAt _ _  = Nothing
---
--- -- | Update the element at the specified index, returning a new
--- -- | list or `Nothing` if the index is out-of-bounds.
--- -- |
--- -- | Running time: `O(n)`
--- updateAt :: forall a. Int -> a -> List a -> Maybe (List a)
--- updateAt 0 x (Cons _ xs) = Just (Cons x xs)
--- updateAt n x (Cons x1 xs) = Cons x1 <$> updateAt (n - 1) x xs
--- updateAt _ _ _ = Nothing
---
--- -- | Update the element at the specified index by applying a function to
--- -- | the current value, returning a new list or `Nothing` if the index is
--- -- | out-of-bounds.
--- -- |
--- -- | Running time: `O(n)`
--- modifyAt :: forall a. Int -> (a -> a) -> List a -> Maybe (List a)
--- modifyAt n f = alterAt n (Just <<< f)
---
--- -- | Update or delete the element at the specified index by applying a
--- -- | function to the current value, returning a new list or `Nothing` if the
--- -- | index is out-of-bounds.
--- -- |
--- -- | Running time: `O(n)`
--- alterAt :: forall a. Int -> (a -> Maybe a) -> List a -> Maybe (List a)
--- alterAt 0 f (Cons y ys) = Just $
---   case f y of
---     Nothing -> ys
---     Just y' -> Cons y' ys
--- alterAt n f (Cons y ys) = Cons y <$> alterAt (n - 1) f ys
--- alterAt _ _ _  = Nothing
---
+
+--------------------------------------------------------------------------------
+-- Indexed operations ----------------------------------------------------------
+--------------------------------------------------------------------------------
+
+-- | Get the element at the specified index, or `Nothing` if the index is out-of-bounds.
+-- |
+-- | Running time: `O(n)` where `n` is the required index.
+index :: forall a. List a -> Int -> Maybe a
+index l i = case uncons l of
+  Nothing -> Nothing
+  Just { head: a } | i == 0 -> Just a
+  Just { tail: as } -> index as (i - 1)
+
+-- | An infix synonym for `index`.
+infixl 8 index as !!
+
+-- | Find the index of the first element equal to the specified element.
+elemIndex :: forall a. Eq a => a -> List a -> Maybe Int
+elemIndex x = findIndex (_ == x)
+
+-- | Find the index of the last element equal to the specified element.
+elemLastIndex :: forall a. Eq a => a -> List a -> Maybe Int
+elemLastIndex x = findLastIndex (_ == x)
+
+-- | Find the first index for which a predicate holds.
+findIndex :: forall a. (a -> Boolean) -> List a -> Maybe Int
+findIndex fn = go 0
+  where
+  go :: Int -> List a -> Maybe Int
+  go n l = case uncons l of 
+    Just { head: x, tail: xs } | fn x -> Just n
+                               | otherwise -> go (n + 1) xs
+    Nothing -> Nothing
+
+-- | Find the last index for which a predicate holds.
+findLastIndex :: forall a. (a -> Boolean) -> List a -> Maybe Int
+findLastIndex fn xs = ((length xs - 1) - _) <$> findIndex fn (reverse xs)
+
+-- | Insert an element into a list at the specified index, returning a new
+-- | list or `Nothing` if the index is out-of-bounds.
+-- |
+-- | Running time: `O(n)`
+insertAt :: forall a. Int -> a -> List a -> Maybe (List a)
+insertAt 0 x xs = Just (x : xs)
+insertAt n x ys'
+  | Just { head: y, tail: ys } <- uncons ys'
+  = (y : _) <$> insertAt (n - 1) x ys
+insertAt _ _ _  = Nothing
+
+-- | Delete an element from a list at the specified index, returning a new
+-- | list or `Nothing` if the index is out-of-bounds.
+-- |
+-- | Running time: `O(n)`
+deleteAt :: forall a. Int -> List a -> Maybe (List a)
+deleteAt n l = case uncons l of 
+  Just { head: y, tail: ys }
+    | n == 0 -> Just ys
+    | otherwise -> (y:_) <$> deleteAt (n - 1) ys
+  Nothing -> Nothing
+
+-- | Update the element at the specified index, returning a new
+-- | list or `Nothing` if the index is out-of-bounds.
+-- |
+-- | Running time: `O(n)`
+updateAt :: forall a. Int -> a -> List a -> Maybe (List a)
+updateAt n x l = case uncons l of
+  Just { head: y, tail: ys }
+    | n == 0 -> Just (x : ys)
+    | otherwise -> (y:_) <$> updateAt (n - 1) x ys
+  Nothing -> Nothing
+
+-- | Update the element at the specified index by applying a function to
+-- | the current value, returning a new list or `Nothing` if the index is
+-- | out-of-bounds.
+-- |
+-- | Running time: `O(n)`
+modifyAt :: forall a. Int -> (a -> a) -> List a -> Maybe (List a)
+modifyAt n f = alterAt n (Just <<< f)
+
+-- | Update or delete the element at the specified index by applying a
+-- | function to the current value, returning a new list or `Nothing` if the
+-- | index is out-of-bounds.
+-- |
+-- | Running time: `O(n)`
+alterAt :: forall a. Int -> (a -> Maybe a) -> List a -> Maybe (List a)
+alterAt n f l = case uncons l of
+  Just { head: y, tail: ys }
+    | n == 0 -> Just $ case f y of
+                        Nothing -> ys
+                        Just y' -> y' : ys
+    | otherwise -> (y:_) <$> alterAt (n - 1) f ys
+  Nothing -> Nothing
+
 --------------------------------------------------------------------------------
 -- Transformations -------------------------------------------------------------
 --------------------------------------------------------------------------------
@@ -334,15 +365,16 @@ mapMaybe f = go nil
 -- | a value.
 catMaybes :: forall a. List (Maybe a) -> List a
 catMaybes = mapMaybe identity
---
---
--- -- | Apply a function to each element and its index in a list starting at 0.
--- mapWithIndex :: forall a b. (a -> Int -> b) -> List a -> List b
--- mapWithIndex f lst = reverse $ go 0 lst Nil
---   where
---   go _ Nil acc = acc
---   go n (Cons x xs) acc = go (n+1) xs $ Cons (f x n) acc
---
+
+
+-- | Apply a function to each element and its index in a list starting at 0.
+mapWithIndex :: forall a b. (a -> Int -> b) -> List a -> List b
+mapWithIndex f lst = reverse $ go 0 lst nil
+  where
+  go n l acc = case uncons l of
+    Nothing -> acc
+    Just { head: x, tail: xs } -> go (n+1) xs $ (f x n) : acc
+      
 -- --------------------------------------------------------------------------------
 -- -- Sorting ---------------------------------------------------------------------
 -- --------------------------------------------------------------------------------
@@ -387,51 +419,55 @@ catMaybes = mapMaybe identity
 --     | otherwise = Cons a (merge as' bs)
 --   merge Nil bs = bs
 --   merge as Nil = as
---
--- --------------------------------------------------------------------------------
--- -- Sublists --------------------------------------------------------------------
--- --------------------------------------------------------------------------------
---
--- -- | Extract a sublist by a start and end index.
--- slice :: forall a. Int -> Int -> List a -> List a
--- slice start end xs = take (end - start) (drop start xs)
---
--- -- | Take the specified number of elements from the front of a list.
--- -- |
--- -- | Running time: `O(n)` where `n` is the number of elements to take.
--- take :: forall a. Int -> List a -> List a
--- take = go Nil
---   where
---   go acc 0 _ = reverse acc
---   go acc _ Nil = reverse acc
---   go acc n (Cons x xs) = go (Cons x acc) (n - 1) xs
---
--- -- | Take those elements from the front of a list which match a predicate.
--- -- |
--- -- | Running time (worst case): `O(n)`
--- takeWhile :: forall a. (a -> Boolean) -> List a -> List a
--- takeWhile p = go Nil
---   where
---   go acc (Cons x xs) | p x = go (Cons x acc) xs
---   go acc _ = reverse acc
---
--- -- | Drop the specified number of elements from the front of a list.
--- -- |
--- -- | Running time: `O(n)` where `n` is the number of elements to drop.
--- drop :: forall a. Int -> List a -> List a
--- drop 0 xs = xs
--- drop _ Nil = Nil
--- drop n (Cons x xs) = drop (n - 1) xs
---
--- -- | Drop those elements from the front of a list which match a predicate.
--- -- |
--- -- | Running time (worst case): `O(n)`
--- dropWhile :: forall a. (a -> Boolean) -> List a -> List a
--- dropWhile p = go
---   where
---   go (Cons x xs) | p x = go xs
---   go xs = xs
---
+
+--------------------------------------------------------------------------------
+-- Sublists --------------------------------------------------------------------
+--------------------------------------------------------------------------------
+
+-- | Extract a sublist by a start and end index.
+slice :: forall a. Int -> Int -> List a -> List a
+slice start end xs = take (end - start) (drop start xs)
+
+-- | Take the specified number of elements from the front of a list.
+-- |
+-- | Running time: `O(n)` where `n` is the number of elements to take.
+take :: forall a. Int -> List a -> List a
+take = go nil
+  where
+  go acc 0 _ = reverse acc
+  go acc n l = case uncons l of
+    Nothing -> reverse acc
+    Just { head: x, tail: xs } -> go (x : acc) (n - 1) xs
+
+-- | Take those elements from the front of a list which match a predicate.
+-- |
+-- | Running time (worst case): `O(n)`
+takeWhile :: forall a. (a -> Boolean) -> List a -> List a
+takeWhile p = go nil
+  where
+  go acc l | Just { head: x, tail: xs } <- uncons l
+           , p x = go (x : acc) xs
+  go acc _ = reverse acc
+
+-- | Drop the specified number of elements from the front of a list.
+-- |
+-- | Running time: `O(n)` where `n` is the number of elements to drop.
+drop :: forall a. Int -> List a -> List a
+drop 0 xs = xs
+drop n l = case uncons l of 
+  Nothing -> nil
+  Just { head: x, tail: xs } -> drop (n - 1) xs
+
+-- | Drop those elements from the front of a list which match a predicate.
+-- |
+-- | Running time (worst case): `O(n)`
+dropWhile :: forall a. (a -> Boolean) -> List a -> List a
+dropWhile p = go
+  where
+  go l | Just { head: x, tail: xs } <- uncons l
+       , p x = go xs
+  go xs = xs
+
 -- -- | Split a list into two parts:
 -- -- |
 -- -- | 1. the longest initial segment for which all elements satisfy the specified predicate
@@ -606,14 +642,15 @@ catMaybes = mapMaybe identity
 -- transpose (Cons (Cons x xs) xss) =
 --   (x : mapMaybe head xss) : transpose (xs : mapMaybe tail xss)
 --
--- --------------------------------------------------------------------------------
--- -- Folding ---------------------------------------------------------------------
--- --------------------------------------------------------------------------------
---
--- -- | Perform a fold using a monadic step function.
--- foldM :: forall m a b. Monad m => (a -> b -> m a) -> a -> List b -> m a
--- foldM _ a Nil = pure a
--- foldM f a (Cons b bs) = f a b >>= \a' -> foldM f a' bs
+--------------------------------------------------------------------------------
+-- Folding ---------------------------------------------------------------------
+--------------------------------------------------------------------------------
+
+-- | Perform a fold using a monadic step function.
+foldM :: forall m a b. Monad m => (a -> b -> m a) -> a -> List b -> m a
+foldM f a l = case uncons l of
+  Nothing -> pure a
+  Just { head: b, tail: bs } -> f a b >>= \a' -> foldM f a' bs
 --
 --------------------------------------------------------------------------------
 -- Instances -------------------------------------------------------------------
