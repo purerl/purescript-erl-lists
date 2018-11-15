@@ -13,7 +13,7 @@ import Data.Unfoldable (replicateA, replicate, unfoldr)
 import Data.Witherable (wilt, wither)
 import Effect (Effect)
 import Effect.Console (log)
-import Erl.Data.List
+import Erl.Data.List (List, alterAt, catMaybes, concat, concatMap, cons, delete, deleteAt, deleteBy, drop, dropWhile, elemIndex, elemLastIndex, filter, findIndex, findLastIndex, foldM, fromFoldable, head, init, insert, insertAt, insertBy, intersect, intersectBy, last, length, mapMaybe, mapWithIndex, modifyAt, nil, nub, nubBy, null, range, reverse, singleton, snoc, tail, take, takeWhile, transpose, uncons, union, unionBy, unzip, updateAt, zip, zipWith, zipWithA, (!!), (..), (:), (\\))
 import Partial.Unsafe (unsafePartial)
 import Test.Assert (assert)
 
@@ -266,49 +266,49 @@ testList = do
   -- log "groupBy should group consecutive equal elements into lists based on an equivalence relation"
   -- assert $ groupBy (\x y -> odd x && odd y) (l [1, 1, 2, 2, 3, 3]) == l [l [1, 1], l [2], l [2], l [3, 3]]
   --
-  -- log "nub should remove duplicate elements from the list, keeping the first occurence"
-  -- assert $ nub (l [1, 2, 2, 3, 4, 1]) == l [1, 2, 3, 4]
-  --
-  -- log "nubBy should remove duplicate items from the list using a supplied predicate"
-  -- let nubPred = \x y -> if odd x then false else x == y
-  -- assert $ nubBy nubPred (l [1, 2, 2, 3, 3, 4, 4, 1]) == l [1, 2, 3, 3, 4, 1]
-  --
-  -- log "union should produce the union of two lists"
-  -- assert $ union (l [1, 2, 3]) (l [2, 3, 4]) == l [1, 2, 3, 4]
-  -- assert $ union (l [1, 1, 2, 3]) (l [2, 3, 4]) == l [1, 1, 2, 3, 4]
-  --
-  -- log "unionBy should produce the union of two lists using the specified equality relation"
-  -- assert $ unionBy (\_ y -> y < 5) (l [1, 2, 3]) (l [2, 3, 4, 5, 6]) == l [1, 2, 3, 5, 6]
-  --
-  -- log "delete should remove the first matching item from an list"
-  -- assert $ delete 1 (l [1, 2, 1]) == l [2, 1]
-  -- assert $ delete 2 (l [1, 2, 1]) == l [1, 1]
-  --
-  -- log "deleteBy should remove the first equality-relation-matching item from an list"
-  -- assert $ deleteBy (/=) 2 (l [1, 2, 1]) == l [2, 1]
-  -- assert $ deleteBy (/=) 1 (l [1, 2, 1]) == l [1, 1]
-  --
-  -- log "(\\\\) should return the difference between two lists"
-  -- assert $ l [1, 2, 3, 4, 3, 2, 1] \\ l [1, 1, 2, 3] == l [4, 3, 2]
-  --
-  -- log "intersect should return the intersection of two lists"
-  -- assert $ intersect (l [1, 2, 3, 4, 3, 2, 1]) (l [1, 1, 2, 3]) == l [1, 2, 3, 3, 2, 1]
-  --
-  -- log "intersectBy should return the intersection of two lists using the specified equivalence relation"
-  -- assert $ intersectBy (\x y -> (x * 2) == y) (l [1, 2, 3]) (l [2, 6]) == l [1, 3]
-  --
-  -- log "zipWith should use the specified function to zip two lists together"
-  -- assert $ zipWith (\x y -> l [show x, y]) (l [1, 2, 3]) (l ["a", "b", "c"]) == l [l ["1", "a"], l ["2", "b"], l ["3", "c"]]
-  --
-  -- log "zipWithA should use the specified function to zip two lists together"
-  -- assert $ zipWithA (\x y -> Just $ Tuple x y) (l [1, 2, 3]) (l ["a", "b", "c"]) == Just (l [Tuple 1 "a", Tuple 2 "b", Tuple 3 "c"])
-  --
-  -- log "zip should use the specified function to zip two lists together"
-  -- assert $ zip (l [1, 2, 3]) (l ["a", "b", "c"]) == l [Tuple 1 "a", Tuple 2 "b", Tuple 3 "c"]
-  --
-  -- log "unzip should deconstruct a list of tuples into a tuple of lists"
-  -- assert $ unzip (l [Tuple 1 "a", Tuple 2 "b", Tuple 3 "c"]) == Tuple (l [1, 2, 3]) (l ["a", "b", "c"])
-  --
+  log "nub should remove duplicate elements from the list, keeping the first occurence"
+  assert $ nub (l [1, 2, 2, 3, 4, 1]) == l [1, 2, 3, 4]
+  
+  log "nubBy should remove duplicate items from the list using a supplied predicate"
+  let nubPred = \x y -> if odd x then false else x == y
+  assert $ nubBy nubPred (l [1, 2, 2, 3, 3, 4, 4, 1]) == l [1, 2, 3, 3, 4, 1]
+  
+  log "union should produce the union of two lists"
+  assert $ union (l [1, 2, 3]) (l [2, 3, 4]) == l [1, 2, 3, 4]
+  assert $ union (l [1, 1, 2, 3]) (l [2, 3, 4]) == l [1, 1, 2, 3, 4]
+  
+  log "unionBy should produce the union of two lists using the specified equality relation"
+  assert $ unionBy (\_ y -> y < 5) (l [1, 2, 3]) (l [2, 3, 4, 5, 6]) == l [1, 2, 3, 5, 6]
+  
+  log "delete should remove the first matching item from an list"
+  assert $ delete 1 (l [1, 2, 1]) == l [2, 1]
+  assert $ delete 2 (l [1, 2, 1]) == l [1, 1]
+  
+  log "deleteBy should remove the first equality-relation-matching item from an list"
+  assert $ deleteBy (/=) 2 (l [1, 2, 1]) == l [2, 1]
+  assert $ deleteBy (/=) 1 (l [1, 2, 1]) == l [1, 1]
+  
+  log "(\\\\) should return the difference between two lists"
+  assert $ l [1, 2, 3, 4, 3, 2, 1] \\ l [1, 1, 2, 3] == l [4, 3, 2]
+  
+  log "intersect should return the intersection of two lists"
+  assert $ intersect (l [1, 2, 3, 4, 3, 2, 1]) (l [1, 1, 2, 3]) == l [1, 2, 3, 3, 2, 1]
+  
+  log "intersectBy should return the intersection of two lists using the specified equivalence relation"
+  assert $ intersectBy (\x y -> (x * 2) == y) (l [1, 2, 3]) (l [2, 6]) == l [1, 3]
+  
+  log "zipWith should use the specified function to zip two lists together"
+  assert $ zipWith (\x y -> l [show x, y]) (l [1, 2, 3]) (l ["a", "b", "c"]) == l [l ["1", "a"], l ["2", "b"], l ["3", "c"]]
+  
+  log "zipWithA should use the specified function to zip two lists together"
+  assert $ zipWithA (\x y -> Just $ Tuple x y) (l [1, 2, 3]) (l ["a", "b", "c"]) == Just (l [Tuple 1 "a", Tuple 2 "b", Tuple 3 "c"])
+  
+  log "zip should use the specified function to zip two lists together"
+  assert $ zip (l [1, 2, 3]) (l ["a", "b", "c"]) == l [Tuple 1 "a", Tuple 2 "b", Tuple 3 "c"]
+  
+  log "unzip should deconstruct a list of tuples into a tuple of lists"
+  assert $ unzip (l [Tuple 1 "a", Tuple 2 "b", Tuple 3 "c"]) == Tuple (l [1, 2, 3]) (l ["a", "b", "c"])
+  
   log "foldM should perform a fold using a monadic step function"
   assert $ foldM (\x y -> Just (x + y)) 0 (range 1 10) == Just 55
   assert $ foldM (\_ _ -> Nothing) 0 (range 1 10) == Nothing
@@ -341,16 +341,16 @@ testList = do
   -- --     primes = eratos $ upFrom 2
   -- -- assert $ L.fromList (L.take 10 primes) == [2, 3, 5, 7, 11, 13, 17, 19, 23, 29]
   --
-  -- log "transpose"
-  -- assert $ transpose (l [l [1,2,3], l[4,5,6], l [7,8,9]]) ==
-  --                    (l [l [1,4,7], l[2,5,8], l [3,6,9]])
-  -- log "transpose skips elements when rows don't match"
-  -- assert $ transpose ((10:11:Nil) : (20:Nil) : Nil : (30:31:32:Nil) : Nil) ==
-  --                    ((10:20:30:Nil) : (11:31:Nil) : (32:Nil) : Nil)
-  -- log "transpose Nil == Nil"
-  -- assert $ transpose Nil == (Nil :: List (List Int))
-  -- log "transpose (singleton Nil) == Nil"
-  -- assert $ transpose (singleton Nil) == (Nil :: List (List Int))
+  log "transpose"
+  assert $ transpose (l [l [1,2,3], l[4,5,6], l [7,8,9]]) ==
+                     (l [l [1,4,7], l[2,5,8], l [3,6,9]])
+  log "transpose skips elements when rows don't match"
+  assert $ transpose ((10:11:nil) : (20:nil) : nil : (30:31:32:nil) : nil) ==
+                     ((10:20:30:nil) : (11:31:nil) : (32:nil) : nil)
+  log "transpose Nil == Nil"
+  assert $ transpose nil == (nil :: List (List Int))
+  log "transpose (singleton Nil) == Nil"
+  assert $ transpose (singleton nil) == (nil :: List (List Int))
 
 
   -- Tests from Filterable

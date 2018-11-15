@@ -41,6 +41,21 @@ module Erl.Data.List
   , takeWhile
   , drop
   , dropWhile
+  , nub
+  , nubBy
+  , union
+  , unionBy
+  , delete
+  , deleteBy
+  , (\\)
+  , difference
+  , intersect
+  , intersectBy
+  , zipWith
+  , zipWithA
+  , zip
+  , transpose
+  , unzip
   , foldM
   ) where
 
@@ -55,7 +70,7 @@ import Data.Compactable (class Compactable, separateDefault)
 import Data.Either (Either(..))
 import Data.Eq (class Eq1, eq1)
 import Data.Filterable (class Filterable)
-import Data.Foldable (class Foldable, foldMapDefaultR, foldr, intercalate)
+import Data.Foldable (class Foldable, any, foldMapDefaultR, foldl, foldr, intercalate)
 import Data.Maybe (Maybe(..))
 import Data.Ord (class Ord1, compare1)
 import Data.Traversable (class Traversable, traverse, sequence)
@@ -514,134 +529,140 @@ dropWhile p = go
 -- groupBy eq (Cons x xs) = case span (eq x) xs of
 --   { init: ys, rest: zs } -> Cons (Cons x ys) (groupBy eq zs)
 --
--- --------------------------------------------------------------------------------
--- -- Set-like operations ---------------------------------------------------------
--- --------------------------------------------------------------------------------
---
--- -- | Remove duplicate elements from a list.
--- -- |
--- -- | Running time: `O(n^2)`
--- nub :: forall a. Eq a => List a -> List a
--- nub = nubBy eq
---
--- -- | Remove duplicate elements from a list, using the specified
--- -- | function to determine equality of elements.
--- -- |
--- -- | Running time: `O(n^2)`
--- nubBy :: forall a. (a -> a -> Boolean) -> List a -> List a
--- nubBy _     Nil = Nil
--- nubBy eq' (Cons x xs) = Cons x (nubBy eq' (filter (\y -> not (eq' x y)) xs))
---
--- -- | Calculate the union of two lists.
--- -- |
--- -- | Running time: `O(n^2)`
--- union :: forall a. Eq a => List a -> List a -> List a
--- union = unionBy (==)
---
--- -- | Calculate the union of two lists, using the specified
--- -- | function to determine equality of elements.
--- -- |
--- -- | Running time: `O(n^2)`
--- unionBy :: forall a. (a -> a -> Boolean) -> List a -> List a -> List a
--- unionBy eq xs ys = xs <> foldl (flip (deleteBy eq)) (nubBy eq ys) xs
---
--- -- | Delete the first occurrence of an element from a list.
--- -- |
--- -- | Running time: `O(n)`
--- delete :: forall a. Eq a => a -> List a -> List a
--- delete = deleteBy (==)
---
--- -- | Delete the first occurrence of an element from a list, using the specified
--- -- | function to determine equality of elements.
--- -- |
--- -- | Running time: `O(n)`
--- deleteBy :: forall a. (a -> a -> Boolean) -> a -> List a -> List a
--- deleteBy _ _ Nil = Nil
--- deleteBy eq' x (Cons y ys) | eq' x y = ys
--- deleteBy eq' x (Cons y ys) = Cons y (deleteBy eq' x ys)
---
--- infix 5 difference as \\
---
--- -- | Delete the first occurrence of each element in the second list from the first list.
--- -- |
--- -- | Running time: `O(n^2)`
--- difference :: forall a. Eq a => List a -> List a -> List a
--- difference = foldl (flip delete)
---
--- -- | Calculate the intersection of two lists.
--- -- |
--- -- | Running time: `O(n^2)`
--- intersect :: forall a. Eq a => List a -> List a -> List a
--- intersect = intersectBy (==)
---
--- -- | Calculate the intersection of two lists, using the specified
--- -- | function to determine equality of elements.
--- -- |
--- -- | Running time: `O(n^2)`
--- intersectBy :: forall a. (a -> a -> Boolean) -> List a -> List a -> List a
--- intersectBy _  Nil _   = Nil
--- intersectBy _  _   Nil = Nil
--- intersectBy eq xs  ys  = filter (\x -> any (eq x) ys) xs
---
--- --------------------------------------------------------------------------------
--- -- Zipping ---------------------------------------------------------------------
--- --------------------------------------------------------------------------------
---
--- -- | Apply a function to pairs of elements at the same positions in two lists,
--- -- | collecting the results in a new list.
--- -- |
--- -- | If one list is longer, elements will be discarded from the longer list.
--- -- |
--- -- | For example
--- -- |
--- -- | ```purescript
--- -- | zipWith (*) (1 : 2 : 3 : Nil) (4 : 5 : 6 : 7 Nil) == 4 : 10 : 18 : Nil
--- -- | ```
--- -- |
--- -- | Running time: `O(min(m, n))`
--- zipWith :: forall a b c. (a -> b -> c) -> List a -> List b -> List c
--- zipWith f xs ys = reverse $ go xs ys Nil
---   where
---   go Nil _ acc = acc
---   go _ Nil acc = acc
---   go (Cons a as) (Cons b bs) acc = go as bs $ Cons (f a b) acc
---
--- -- | A generalization of `zipWith` which accumulates results in some `Applicative`
--- -- | functor.
--- zipWithA :: forall m a b c. Applicative m => (a -> b -> m c) -> List a -> List b -> m (List c)
--- zipWithA f xs ys = sequence (zipWith f xs ys)
---
--- -- | Collect pairs of elements at the same positions in two lists.
--- -- |
--- -- | Running time: `O(min(m, n))`
--- zip :: forall a b. List a -> List b -> List (Tuple a b)
--- zip = zipWith Tuple
---
--- -- | Transforms a list of pairs into a list of first components and a list of
--- -- | second components.
--- unzip :: forall a b. List (Tuple a b) -> Tuple (List a) (List b)
--- unzip = foldr (\(Tuple a b) (Tuple as bs) -> Tuple (Cons a as) (Cons b bs)) (Tuple Nil Nil)
---
--- --------------------------------------------------------------------------------
--- -- Transpose -------------------------------------------------------------------
--- --------------------------------------------------------------------------------
---
--- -- | The 'transpose' function transposes the rows and columns of its argument.
--- -- | For example,
--- -- |
--- -- |     transpose ((1:2:3:Nil) : (4:5:6:Nil) : Nil) ==
--- -- |       ((1:4:Nil) : (2:5:Nil) : (3:6:Nil) : Nil)
--- -- |
--- -- | If some of the rows are shorter than the following rows, their elements are skipped:
--- -- |
--- -- |     transpose ((10:11:Nil) : (20:Nil) : Nil : (30:31:32:Nil) : Nil) ==
--- -- |       ((10:20:30:Nil) : (11:31:Nil) : (32:Nil) : Nil)
--- transpose :: forall a. List (List a) -> List (List a)
--- transpose Nil = Nil
--- transpose (Cons Nil xss) = transpose xss
--- transpose (Cons (Cons x xs) xss) =
---   (x : mapMaybe head xss) : transpose (xs : mapMaybe tail xss)
---
+--------------------------------------------------------------------------------
+-- Set-like operations ---------------------------------------------------------
+--------------------------------------------------------------------------------
+
+-- | Remove duplicate elements from a list.
+-- |
+-- | Running time: `O(n^2)`
+nub :: forall a. Eq a => List a -> List a
+nub = nubBy eq
+
+-- | Remove duplicate elements from a list, using the specified
+-- | function to determine equality of elements.
+-- |
+-- | Running time: `O(n^2)`
+nubBy :: forall a. (a -> a -> Boolean) -> List a -> List a
+nubBy eq' l = case uncons l of 
+  Nothing -> nil
+  Just { head: x, tail: xs } -> x : nubBy eq' (filter (\y -> not (eq' x y)) xs)
+
+-- | Calculate the union of two lists.
+-- |
+-- | Running time: `O(n^2)`
+union :: forall a. Eq a => List a -> List a -> List a
+union = unionBy (==)
+
+-- | Calculate the union of two lists, using the specified
+-- | function to determine equality of elements.
+-- |
+-- | Running time: `O(n^2)`
+unionBy :: forall a. (a -> a -> Boolean) -> List a -> List a -> List a
+unionBy eq xs ys = xs <> foldl (flip (deleteBy eq)) (nubBy eq ys) xs
+
+-- | Delete the first occurrence of an element from a list.
+-- |
+-- | Running time: `O(n)`
+delete :: forall a. Eq a => a -> List a -> List a
+delete = deleteBy (==)
+
+-- | Delete the first occurrence of an element from a list, using the specified
+-- | function to determine equality of elements.
+-- |
+-- | Running time: `O(n)`
+deleteBy :: forall a. (a -> a -> Boolean) -> a -> List a -> List a
+deleteBy eq' x l = case uncons l of 
+  Nothing -> nil
+  Just { head: y, tail: ys }
+    | eq' x y -> ys
+    | otherwise -> y : (deleteBy eq' x ys)
+
+infix 5 difference as \\
+
+-- | Delete the first occurrence of each element in the second list from the first list.
+-- |
+-- | Running time: `O(n^2)`
+difference :: forall a. Eq a => List a -> List a -> List a
+difference = foldl (flip delete)
+
+-- | Calculate the intersection of two lists.
+-- |
+-- | Running time: `O(n^2)`
+intersect :: forall a. Eq a => List a -> List a -> List a
+intersect = intersectBy (==)
+
+-- | Calculate the intersection of two lists, using the specified
+-- | function to determine equality of elements.
+-- |
+-- | Running time: `O(n^2)`
+intersectBy :: forall a. (a -> a -> Boolean) -> List a -> List a -> List a
+intersectBy _  xs _   | Nothing <- uncons xs = nil
+intersectBy _  _  ys  | Nothing <- uncons ys = nil
+intersectBy eq xs ys  = filter (\x -> any (eq x) ys) xs
+
+--------------------------------------------------------------------------------
+-- Zipping ---------------------------------------------------------------------
+--------------------------------------------------------------------------------
+
+-- | Apply a function to pairs of elements at the same positions in two lists,
+-- | collecting the results in a new list.
+-- |
+-- | If one list is longer, elements will be discarded from the longer list.
+-- |
+-- | For example
+-- |
+-- | ```purescript
+-- | zipWith (*) (1 : 2 : 3 : Nil) (4 : 5 : 6 : 7 Nil) == 4 : 10 : 18 : Nil
+-- | ```
+-- |
+-- | Running time: `O(min(m, n))`
+zipWith :: forall a b c. (a -> b -> c) -> List a -> List b -> List c
+zipWith f xs ys = reverse $ go xs ys nil
+  where
+  go l1 l2 acc = case uncons l1, uncons l2 of
+    Nothing, _ -> acc
+    _, Nothing -> acc
+    Just { head: a, tail: as }, Just { head: b, tail: bs } -> go as bs $ (f a b) : acc
+
+-- | A generalization of `zipWith` which accumulates results in some `Applicative`
+-- | functor.
+zipWithA :: forall m a b c. Applicative m => (a -> b -> m c) -> List a -> List b -> m (List c)
+zipWithA f xs ys = sequence (zipWith f xs ys)
+
+-- | Collect pairs of elements at the same positions in two lists.
+-- |
+-- | Running time: `O(min(m, n))`
+zip :: forall a b. List a -> List b -> List (Tuple a b)
+zip = zipWith Tuple
+
+-- | Transforms a list of pairs into a list of first components and a list of
+-- | second components.
+unzip :: forall a b. List (Tuple a b) -> Tuple (List a) (List b)
+unzip = foldr (\(Tuple a b) (Tuple as bs) -> Tuple (a : as) (b : bs)) (Tuple nil nil)
+
+--------------------------------------------------------------------------------
+-- Transpose -------------------------------------------------------------------
+--------------------------------------------------------------------------------
+
+-- | The 'transpose' function transposes the rows and columns of its argument.
+-- | For example,
+-- |
+-- |     transpose ((1:2:3:Nil) : (4:5:6:Nil) : Nil) ==
+-- |       ((1:4:Nil) : (2:5:Nil) : (3:6:Nil) : Nil)
+-- |
+-- | If some of the rows are shorter than the following rows, their elements are skipped:
+-- |
+-- |     transpose ((10:11:Nil) : (20:Nil) : Nil : (30:31:32:Nil) : Nil) ==
+-- |       ((10:20:30:Nil) : (11:31:Nil) : (32:Nil) : Nil)
+transpose :: forall a. List (List a) -> List (List a)
+transpose l = case uncons l of
+  Nothing -> nil
+  Just { head: h0, tail: xss } ->
+    case uncons h0 of
+      Nothing -> transpose xss
+      Just { head: x, tail: xs } -> (x : mapMaybe head xss) : transpose (xs : mapMaybe tail xss)
+
 --------------------------------------------------------------------------------
 -- Folding ---------------------------------------------------------------------
 --------------------------------------------------------------------------------
