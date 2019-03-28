@@ -225,13 +225,13 @@ testList = do
   
   log "mapWithIndex should take a list of values and apply a function which also takes the index into account"
   assert $ mapWithIndex (\x ix -> x + ix) (fromFoldable [0, 1, 2, 3]) == fromFoldable [0, 2, 4, 6]
-  --
-  -- log "sort should reorder a list into ascending order based on the result of compare"
-  -- assert $ sort (l [1, 3, 2, 5, 6, 4]) == l [1, 2, 3, 4, 5, 6]
-  --
-  -- log "sortBy should reorder a list into ascending order based on the result of a comparison function"
-  -- assert $ sortBy (flip compare) (l [1, 3, 2, 5, 6, 4]) == l [6, 5, 4, 3, 2, 1]
-  --
+  
+  log "sort should reorder a list into ascending order based on the result of compare"
+  assert $ sort (l [1, 3, 2, 5, 6, 4]) == l [1, 2, 3, 4, 5, 6]
+  
+  log "sortBy should reorder a list into ascending order based on the result of a comparison function"
+  assert $ sortBy (flip compare) (l [1, 3, 2, 5, 6, 4]) == l [6, 5, 4, 3, 2, 1]
+  
   log "take should keep the specified number of items from the front of an list, discarding the rest"
   assert $ (take 1 (l [1, 2, 3])) == l [1]
   assert $ (take 2 (l [1, 2, 3])) == l [1, 2]

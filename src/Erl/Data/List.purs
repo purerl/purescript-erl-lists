@@ -36,6 +36,10 @@ module Erl.Data.List
   , mapMaybe
   , catMaybes
   , mapWithIndex
+  , sort
+  , sortBy
+  , merge
+  , mergeBy
   , slice
   , take
   , takeWhile
@@ -390,50 +394,64 @@ mapWithIndex f lst = reverse $ go 0 lst nil
     Nothing -> acc
     Just { head: x, tail: xs } -> go (n+1) xs $ (f x n) : acc
       
--- --------------------------------------------------------------------------------
--- -- Sorting ---------------------------------------------------------------------
--- --------------------------------------------------------------------------------
---
--- -- | Sort the elements of an list in increasing order.
--- sort :: forall a. Ord a => List a -> List a
--- sort xs = sortBy compare xs
---
--- -- | Sort the elements of a list in increasing order, where elements are
--- -- | compared using the specified ordering.
--- sortBy :: forall a. (a -> a -> Ordering) -> List a -> List a
--- sortBy cmp = mergeAll <<< sequences
---   -- implementation lifted from http://hackage.haskell.org/package/base-4.8.0.0/docs/src/Data-OldList.html#sort
---   where
---   sequences :: List a -> List (List a)
---   sequences (Cons a (Cons b xs))
---     | a `cmp` b == GT = descending b (singleton a) xs
---     | otherwise = ascending b (Cons a) xs
---   sequences xs = singleton xs
---
---   descending :: a -> List a -> List a -> List (List a)
---   descending a as (Cons b bs)
---     | a `cmp` b == GT = descending b (Cons a as) bs
---   descending a as bs = Cons (Cons a as) (sequences bs)
---
---   ascending :: a -> (List a -> List a) -> List a -> List (List a)
---   ascending a as (Cons b bs)
---     | a `cmp` b /= GT = ascending b (\ys -> as (Cons a ys)) bs
---   ascending a as bs = (Cons (as $ singleton a) (sequences bs))
---
---   mergeAll :: List (List a) -> List a
---   mergeAll (Cons x Nil) = x
---   mergeAll xs = mergeAll (mergePairs xs)
---
---   mergePairs :: List (List a) -> List (List a)
---   mergePairs (Cons a (Cons b xs)) = Cons (merge a b) (mergePairs xs)
---   mergePairs xs = xs
---
---   merge :: List a -> List a -> List a
---   merge as@(Cons a as') bs@(Cons b bs')
---     | a `cmp` b == GT = Cons b (merge as bs')
---     | otherwise = Cons a (merge as' bs)
---   merge Nil bs = bs
---   merge as Nil = as
+--------------------------------------------------------------------------------
+-- Sorting ---------------------------------------------------------------------
+--------------------------------------------------------------------------------
+
+-- | Sort the elements of an list in increasing order.
+sort :: forall a. Ord a => List a -> List a
+sort xs = sortBy compare xs
+
+-- | Sort the elements of a list in increasing order, where elements are
+-- | compared using the specified ordering.
+sortBy :: forall a. (a -> a -> Ordering) -> List a -> List a
+sortBy cmp = mergeAll <<< sequences
+  -- implementation lifted from http://hackage.haskell.org/package/base-4.8.0.0/docs/src/Data-OldList.html#sort
+  where
+  sequences :: List a -> List (List a)
+  sequences xs0 
+    | Just { head: a, tail } <- uncons xs0
+    , Just { head: b, tail: xs } <- uncons tail =
+      case a `cmp` b of
+        GT -> descending b (singleton a) xs
+        _ -> ascending b (a : _) xs
+  sequences xs = singleton xs
+
+  descending :: a -> List a -> List a -> List (List a)
+  descending a as bs0
+    | Just { head: b, tail: bs } <- uncons bs0
+    , a `cmp` b == GT = descending b (a : as) bs
+  descending a as bs = (a : as) : (sequences bs)
+
+  ascending :: a -> (List a -> List a) -> List a -> List (List a)
+  ascending a as bs0
+    | Just { head: b, tail: bs } <- uncons bs0
+    , a `cmp` b /= GT = ascending b (\ys -> as (a : ys)) bs
+  ascending a as bs = (cons (as $ singleton a) (sequences bs))
+
+  mergeAll :: List (List a) -> List a
+  mergeAll xs
+    | Just { head: x, tail } <- uncons xs
+    , null tail = x
+  mergeAll xs = mergeAll (mergePairs xs)
+
+  mergePairs :: List (List a) -> List (List a)
+  mergePairs xs0 
+    | Just { head: a, tail } <- uncons xs0
+    , Just { head: b, tail: xs} <- uncons tail =
+        mergeBy cmp a b : mergePairs xs
+  mergePairs xs = xs
+
+merge :: forall a. Ord a => List a -> List a -> List a
+merge = mergeBy compare
+
+mergeBy :: forall a. (a -> a -> Ordering) -> List a -> List a -> List a
+mergeBy cmp as bs = case uncons as, uncons bs of
+  Just { head: a, tail: as' }, Just { head: b, tail: bs' }
+    | a `cmp` b == GT -> b : (mergeBy cmp as bs')
+    | otherwise -> a : (mergeBy cmp as' bs)
+  Nothing, _ -> bs
+  _, Nothing -> as
 
 --------------------------------------------------------------------------------
 -- Sublists --------------------------------------------------------------------
