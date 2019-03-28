@@ -13,7 +13,7 @@ import Data.Unfoldable (replicateA, replicate, unfoldr)
 import Data.Witherable (wilt, wither)
 import Effect (Effect)
 import Effect.Console (log)
-import Erl.Data.List (List, alterAt, catMaybes, concat, concatMap, cons, delete, deleteAt, deleteBy, drop, dropWhile, elemIndex, elemLastIndex, filter, findIndex, findLastIndex, foldM, fromFoldable, head, init, insert, insertAt, insertBy, intersect, intersectBy, last, length, mapMaybe, mapWithIndex, modifyAt, nil, nub, nubBy, null, range, reverse, singleton, snoc, tail, take, takeWhile, transpose, uncons, union, unionBy, unzip, updateAt, zip, zipWith, zipWithA, (!!), (..), (:), (\\))
+import Erl.Data.List (List, alterAt, catMaybes, concat, concatMap, cons, delete, deleteAt, deleteBy, drop, dropWhile, elemIndex, elemLastIndex, filter, findIndex, findLastIndex, foldM, fromFoldable, head, init, insert, insertAt, insertBy, intersect, intersectBy, last, length, mapMaybe, mapWithIndex, modifyAt, nil, nub, nubBy, null, range, reverse, singleton, snoc, sort, sortBy, tail, take, takeWhile, transpose, uncons, union, unionBy, unzip, updateAt, zip, zipWith, zipWithA, (!!), (..), (:), (\\))
 import Partial.Unsafe (unsafePartial)
 import Test.Assert (assert)
 
