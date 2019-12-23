@@ -20,6 +20,7 @@ module Erl.Data.List
   , uncons
   , index
   , (!!)
+  , elem
   , elemIndex
   , elemLastIndex
   , findIndex
@@ -75,7 +76,7 @@ import Data.Either (Either(..))
 import Data.Eq (class Eq1, eq1)
 import Data.Filterable (class Filterable)
 import Data.Foldable (class Foldable, any, foldMapDefaultR, foldl, foldr, intercalate)
-import Data.Maybe (Maybe(..))
+import Data.Maybe (Maybe(..), maybe)
 import Data.Ord (class Ord1, compare1)
 import Data.Traversable (class Traversable, traverse, sequence)
 import Data.Tuple (Tuple(..))
@@ -245,6 +246,11 @@ index l i = case uncons l of
 -- | An infix synonym for `index`.
 infixl 8 index as !!
 
+
+elem :: forall a. Eq a => a -> List a -> Boolean
+elem a = maybe false (const true) <<< elemIndex a
+
+
 -- | Find the index of the first element equal to the specified element.
 elemIndex :: forall a. Eq a => a -> List a -> Maybe Int
 elemIndex x = findIndex (_ == x)
@@ -258,7 +264,7 @@ findIndex :: forall a. (a -> Boolean) -> List a -> Maybe Int
 findIndex fn = go 0
   where
   go :: Int -> List a -> Maybe Int
-  go n l = case uncons l of 
+  go n l = case uncons l of
     Just { head: x, tail: xs } | fn x -> Just n
                                | otherwise -> go (n + 1) xs
     Nothing -> Nothing
@@ -283,7 +289,7 @@ insertAt _ _ _  = Nothing
 -- |
 -- | Running time: `O(n)`
 deleteAt :: forall a. Int -> List a -> Maybe (List a)
-deleteAt n l = case uncons l of 
+deleteAt n l = case uncons l of
   Just { head: y, tail: ys }
     | n == 0 -> Just ys
     | otherwise -> (y:_) <$> deleteAt (n - 1) ys
@@ -375,7 +381,7 @@ mapMaybe f = go nil
   where
   go acc l = case uncons l of
     Nothing -> reverse acc
-    Just { head: x, tail: xs } -> 
+    Just { head: x, tail: xs } ->
       case f x of
         Nothing -> go acc xs
         Just y -> go (y : acc) xs
@@ -393,7 +399,7 @@ mapWithIndex f lst = reverse $ go 0 lst nil
   go n l acc = case uncons l of
     Nothing -> acc
     Just { head: x, tail: xs } -> go (n+1) xs $ (f x n) : acc
-      
+
 --------------------------------------------------------------------------------
 -- Sorting ---------------------------------------------------------------------
 --------------------------------------------------------------------------------
@@ -409,7 +415,7 @@ sortBy cmp = mergeAll <<< sequences
   -- implementation lifted from http://hackage.haskell.org/package/base-4.8.0.0/docs/src/Data-OldList.html#sort
   where
   sequences :: List a -> List (List a)
-  sequences xs0 
+  sequences xs0
     | Just { head: a, tail } <- uncons xs0
     , Just { head: b, tail: xs } <- uncons tail =
       case a `cmp` b of
@@ -436,7 +442,7 @@ sortBy cmp = mergeAll <<< sequences
   mergeAll xs = mergeAll (mergePairs xs)
 
   mergePairs :: List (List a) -> List (List a)
-  mergePairs xs0 
+  mergePairs xs0
     | Just { head: a, tail } <- uncons xs0
     , Just { head: b, tail: xs} <- uncons tail =
         mergeBy cmp a b : mergePairs xs
@@ -487,7 +493,7 @@ takeWhile p = go nil
 -- | Running time: `O(n)` where `n` is the number of elements to drop.
 drop :: forall a. Int -> List a -> List a
 drop 0 xs = xs
-drop n l = case uncons l of 
+drop n l = case uncons l of
   Nothing -> nil
   Just { head: x, tail: xs } -> drop (n - 1) xs
 
@@ -562,7 +568,7 @@ nub = nubBy eq
 -- |
 -- | Running time: `O(n^2)`
 nubBy :: forall a. (a -> a -> Boolean) -> List a -> List a
-nubBy eq' l = case uncons l of 
+nubBy eq' l = case uncons l of
   Nothing -> nil
   Just { head: x, tail: xs } -> x : nubBy eq' (filter (\y -> not (eq' x y)) xs)
 
@@ -590,7 +596,7 @@ delete = deleteBy (==)
 -- |
 -- | Running time: `O(n)`
 deleteBy :: forall a. (a -> a -> Boolean) -> a -> List a -> List a
-deleteBy eq' x l = case uncons l of 
+deleteBy eq' x l = case uncons l of
   Nothing -> nil
   Just { head: y, tail: ys }
     | eq' x y -> ys
@@ -711,7 +717,7 @@ instance eq1List :: Eq1 List where
           Nothing, Nothing -> acc
           Just { head: x, tail: xs'' }, Just { head: y, tail: ys'' } -> go xs'' ys'' $ acc && (y == x)
           _, _ -> false
-         
+
 instance ordList :: Ord a => Ord (List a) where
   compare = compare1
 
@@ -810,7 +816,7 @@ instance filterableList :: Filterable List where
         select x { left, right } = case p x of
                                      Left l -> { left: l : left, right }
                                      Right r -> { left, right: r : right }
-  
+
   partition :: forall a. (a -> Boolean) -> List a -> { no :: List a, yes :: List a }
   partition p xs = foldr select { no: nil, yes: nil } xs
       where
@@ -819,7 +825,7 @@ instance filterableList :: Filterable List where
                                  then { no, yes: x : yes }
                                  else { no: x : no, yes }
 
-  
+
   filterMap :: forall a b. (a -> Maybe b) -> List a -> List b
   filterMap = mapMaybe
 
