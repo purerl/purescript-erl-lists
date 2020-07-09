@@ -3,7 +3,8 @@
 all: ps erl
 
 ps:
-	psc-package sources | xargs purs compile 'test/**/*.purs' 'src/**/*.purs'
+	psc-package sources | xargs purs compile -g corefn 'test/**/*.purs' 'src/**/*.purs'
+	purerl
 
 test: ps erl
 	erl -pa ebin -noshell -eval '(test_main@ps:main())()' -eval 'init:stop()'

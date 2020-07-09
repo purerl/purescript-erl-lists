@@ -13,6 +13,8 @@ import Data.Unfoldable (replicateA, replicate, unfoldr)
 import Data.Witherable (wilt, wither)
 import Effect (Effect)
 import Effect.Console (log)
+import Data.Traversable (traverse)
+import Data.TraversableWithIndex (traverseWithIndex)
 import Erl.Data.List (List, alterAt, catMaybes, concat, concatMap, cons, delete, deleteAt, deleteBy, drop, dropWhile, elemIndex, elemLastIndex, filter, findIndex, findLastIndex, foldM, fromFoldable, head, init, insert, insertAt, insertBy, intersect, intersectBy, last, length, mapMaybe, mapWithIndex, modifyAt, nil, nub, nubBy, null, range, reverse, singleton, snoc, sort, sortBy, tail, take, takeWhile, transpose, uncons, union, unionBy, unzip, updateAt, zip, zipWith, zipWithA, (!!), (..), (:), (\\))
 import Partial.Unsafe (unsafePartial)
 import Test.Assert (assert)
@@ -351,6 +353,18 @@ testList = do
   assert $ transpose nil == (nil :: List (List Int))
   log "transpose (singleton Nil) == Nil"
   assert $ transpose (singleton nil) == (nil :: List (List Int))
+
+
+  log "traverse should be stack-safe"
+  let xs = fromFoldable (range 1 100000)
+  assert $ traverse Just xs == Just xs
+
+  log "traverseWithIndex should be stack-safe"
+  assert $ traverseWithIndex (const Just) xs == Just xs
+
+  log "traverseWithIndex should be correct"
+  assert $ traverseWithIndex (\i a -> Just $ i + a) (fromFoldable [2, 2, 2])
+           == Just (fromFoldable [2, 3, 4])
 
 
   -- Tests from Filterable

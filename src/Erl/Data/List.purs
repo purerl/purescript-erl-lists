@@ -74,10 +74,13 @@ import Data.Compactable (class Compactable, separateDefault)
 import Data.Either (Either(..))
 import Data.Eq (class Eq1, eq1)
 import Data.Filterable (class Filterable)
-import Data.Foldable (class Foldable, any, foldMapDefaultR, foldl, foldr, intercalate)
+import Data.Foldable (class Foldable, any, foldMapDefaultR, foldl, foldr, intercalate, foldMap)
 import Data.Maybe (Maybe(..))
 import Data.Ord (class Ord1, compare1)
 import Data.Traversable (class Traversable, traverse, sequence)
+import Data.TraversableWithIndex (class TraversableWithIndex, traverseWithIndex)
+import Data.FunctorWithIndex (class FunctorWithIndex, mapDefault)
+import Data.FoldableWithIndex (class FoldableWithIndex, foldrWithIndex, foldlWithIndexDefault, foldrWithIndexDefault, foldMapWithIndexDefaultR)
 import Data.Tuple (Tuple(..))
 import Data.Unfoldable (class Unfoldable, unfoldr)
 import Data.Unfoldable1 (class Unfoldable1)
@@ -772,6 +775,23 @@ instance traversableList :: Traversable List where
     case uncons lst of
       Nothing -> pure nil
       Just { head: h, tail: t } -> cons <$> h <*> sequence t
+
+instance traversableWithIndexList :: TraversableWithIndex Int List where
+  traverseWithIndex f lst =
+    traverseWithIndexImpl f lst 0
+      where 
+          traverseWithIndexImpl f lst i = 
+            case uncons lst of
+              Nothing -> pure nil
+              Just { head: h, tail: t } -> cons <$> f i h <*> traverseWithIndexImpl f t (i+1)
+
+instance foldableWithIndexList :: FoldableWithIndex Int List where
+  foldrWithIndex f z lst = foldr (\(Tuple x i) y -> f i x y) z $ mapWithIndex Tuple lst
+  foldlWithIndex f z lst = foldl (\y (Tuple x i) -> f i y x) z $ mapWithIndex Tuple lst
+  foldMapWithIndex f = foldMapWithIndexDefaultR f
+
+instance functorWithIndexList :: FunctorWithIndex Int List where
+  mapWithIndex f = foldrWithIndex (\i x acc -> f i x : acc) nil
 
 instance applyList :: Apply List where
   apply list xs =
