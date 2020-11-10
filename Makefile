@@ -1,14 +1,10 @@
-.PHONY: ps erl all test
+.PHONY: all build test
 
-all: ps erl
+all: build
 
-ps:
-	psc-package sources | xargs purs compile -g corefn 'test/**/*.purs' 'src/**/*.purs'
-	purerl
+build:
+	spago build
 
-test: ps erl
-	erl -pa ebin -noshell -eval '(test_main@ps:main())()' -eval 'init:stop()'
+test:
+	spago test
 
-erl:
-	mkdir -p ebin
-	erlc -o ebin/ output/*/*.erl
