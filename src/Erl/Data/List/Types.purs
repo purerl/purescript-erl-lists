@@ -7,13 +7,21 @@ module Erl.Data.List.Types
 import Prelude
 
 import Control.Alt (class Alt)
+import Control.Apply (lift2)
 import Control.Comonad (class Comonad)
 import Control.Extend (class Extend)
-import Data.Foldable (class Foldable, foldr)
+import Data.Foldable (class Foldable, foldl, foldr)
+import Data.FoldableWithIndex (class FoldableWithIndex, foldMapWithIndex, foldlWithIndex, foldrWithIndex)
+import Data.FunctorWithIndex (class FunctorWithIndex, mapWithIndex)
+import Data.Maybe (maybe)
 import Data.Newtype (class Newtype)
 import Data.NonEmpty (NonEmpty, (:|))
 import Data.NonEmpty as NE
 import Data.Semigroup.Foldable (class Foldable1)
+import Data.Semigroup.Traversable (class Traversable1, traverse1)
+import Data.Traversable (class Traversable)
+import Data.TraversableWithIndex (class TraversableWithIndex, traverseWithIndex)
+import Data.Unfoldable1 (class Unfoldable1)
 import Erl.Data.List (List, nil, (:))
 
 newtype NonEmptyList a = NonEmptyList (NonEmpty List a)
@@ -67,25 +75,25 @@ instance semigroupNonEmptyList :: Semigroup (NonEmptyList a) where
 
 derive newtype instance foldableNonEmptyList :: Foldable NonEmptyList
 
--- derive newtype instance traversableNonEmptyList :: Traversable NonEmptyList
+derive newtype instance traversableNonEmptyList :: Traversable NonEmptyList
 
 derive newtype instance foldable1NonEmptyList :: Foldable1 NonEmptyList
 
--- derive newtype instance unfoldable1NonEmptyList :: Unfoldable1 NonEmptyList
+derive newtype instance unfoldable1NonEmptyList :: Unfoldable1 NonEmptyList
 
--- instance functorWithIndexNonEmptyList :: FunctorWithIndex Int NonEmptyList where
---   mapWithIndex fn (NonEmptyList ne) = NonEmptyList $ mapWithIndex (fn <<< maybe 0 (add 1)) ne
+instance functorWithIndexNonEmptyList :: FunctorWithIndex Int NonEmptyList where
+  mapWithIndex fn (NonEmptyList ne) = NonEmptyList $ mapWithIndex (fn <<< maybe 0 (add 1)) ne
 
--- instance foldableWithIndexNonEmptyList :: FoldableWithIndex Int NonEmptyList where
---   foldMapWithIndex f (NonEmptyList ne) = foldMapWithIndex (f <<< maybe 0 (add 1)) ne
---   foldlWithIndex f b (NonEmptyList ne) = foldlWithIndex (f <<< maybe 0 (add 1)) b ne
---   foldrWithIndex f b (NonEmptyList ne) = foldrWithIndex (f <<< maybe 0 (add 1)) b ne
+instance foldableWithIndexNonEmptyList :: FoldableWithIndex Int NonEmptyList where
+  foldMapWithIndex f (NonEmptyList ne) = foldMapWithIndex (f <<< maybe 0 (add 1)) ne
+  foldlWithIndex f b (NonEmptyList ne) = foldlWithIndex (f <<< maybe 0 (add 1)) b ne
+  foldrWithIndex f b (NonEmptyList ne) = foldrWithIndex (f <<< maybe 0 (add 1)) b ne
 
--- instance traversableWithIndexNonEmptyList :: TraversableWithIndex Int NonEmptyList where
---   traverseWithIndex f (NonEmptyList ne) = NonEmptyList <$> traverseWithIndex (f <<< maybe 0 (add 1)) ne
+instance traversableWithIndexNonEmptyList :: TraversableWithIndex Int NonEmptyList where
+  traverseWithIndex f (NonEmptyList ne) = NonEmptyList <$> traverseWithIndex (f <<< maybe 0 (add 1)) ne
 
--- instance traversable1NonEmptyList :: Traversable1 NonEmptyList where
---   traverse1 f (NonEmptyList (a :| as)) =
---     foldl (\acc -> lift2 (flip nelCons) acc <<< f) (pure <$> f a) as
---       <#> case _ of NonEmptyList (x :| xs) → foldl (flip nelCons) (pure x) xs
---   sequence1 = traverse1 identity
+instance traversable1NonEmptyList :: Traversable1 NonEmptyList where
+  traverse1 f (NonEmptyList (a :| as)) =
+    foldl (\acc -> lift2 (flip nelCons) acc <<< f) (pure <$> f a) as
+      <#> case _ of NonEmptyList (x :| xs) → foldl (flip nelCons) (pure x) xs
+  sequence1 = traverse1 identity
