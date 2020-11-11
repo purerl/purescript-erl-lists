@@ -1,23 +1,19 @@
 module Erl.Data.List
-  ( List
-  , nil
-  , cons
-  , (:)
+  ( module Erl.Data.List.Types
   , toUnfoldable
   , fromFoldable
   , singleton
   , range
   , (..)
-  , null
   , length
   , snoc
+  , unsnoc
   , insert
   , insertBy
   , head
   , last
   , tail
   , init
-  , uncons
   , index
   , (!!)
   , elemIndex
@@ -32,10 +28,8 @@ module Erl.Data.List
   , reverse
   , concat
   , concatMap
-  , filter
-  , mapMaybe
+  , filterM
   , catMaybes
-  , mapWithIndex
   , sort
   , sortBy
   , merge
@@ -45,6 +39,10 @@ module Erl.Data.List
   , takeWhile
   , drop
   , dropWhile
+  , span
+  , group
+  , group'
+  , groupBy
   , nub
   , nubBy
   , union
@@ -65,35 +63,14 @@ module Erl.Data.List
 
 import Prelude
 
-import Control.Alt (class Alt)
-import Control.Alternative (class Alternative)
-import Control.MonadPlus (class MonadPlus)
-import Control.MonadZero (class MonadZero)
-import Control.Plus (class Plus)
-import Data.Compactable (class Compactable, separateDefault)
-import Data.Either (Either(..))
-import Data.Eq (class Eq1, eq1)
-import Data.Filterable (class Filterable)
-import Data.Foldable (class Foldable, any, foldMapDefaultR, foldl, foldr, intercalate, foldMap)
+import Data.Filterable (filter, filterMap)
+import Data.Foldable (class Foldable, any, foldl, foldr)
 import Data.Maybe (Maybe(..))
-import Data.Ord (class Ord1, compare1)
-import Data.Traversable (class Traversable, traverse, sequence)
-import Data.TraversableWithIndex (class TraversableWithIndex, traverseWithIndex)
-import Data.FunctorWithIndex (class FunctorWithIndex, mapDefault)
-import Data.FoldableWithIndex (class FoldableWithIndex, foldrWithIndex, foldlWithIndexDefault, foldrWithIndexDefault, foldMapWithIndexDefaultR)
+import Data.NonEmpty ((:|))
+import Data.Traversable (sequence)
 import Data.Tuple (Tuple(..))
 import Data.Unfoldable (class Unfoldable, unfoldr)
-import Data.Unfoldable1 (class Unfoldable1)
-import Data.Witherable (class Witherable, wiltDefault, witherDefault)
-
-foreign import data List :: Type -> Type
-
-foreign import nil :: forall a. List a
-
-foreign import cons :: forall a. a -> List a -> List a
-
-infixr 6 cons as :
-
+import Erl.Data.List.Types (List, NonEmptyList(..), cons, nil, null, uncons, (:))
 
 -- | Convert a list into any unfoldable structure.
 -- |
@@ -145,11 +122,6 @@ range n m = rangeImpl n m (if n > m then -1 else 1)
 --------------------------------------------------------------------------------
 -- List size -------------------------------------------------------------------
 --------------------------------------------------------------------------------
-
--- | Test whether a list is empty.
--- |
--- | Running time: `O(1)`
-foreign import null :: forall a. List a -> Boolean
 
 -- | Get the length of a list
 -- |
@@ -213,24 +185,21 @@ tail = map _.tail <<< uncons
 -- |
 -- | Running time: `O(n)`
 init :: forall a. List a -> Maybe (List a)
-init lst | null lst = Nothing
-init lst = Just $ reverse $ go lst nil
-  where
-  go lst' acc = case uncons lst' of
-    Just { head: _, tail: t } | null t -> acc
-    Just { head: h, tail: t } -> go t $ h : acc
-    Nothing -> acc
+init lst = _.init <$> unsnoc lst
 
---
--- | Break a list into its first element, and the remaining elements,
+
+
+-- | Break a list into its last element, and the preceding elements,
 -- | or `Nothing` if the list is empty.
 -- |
--- | Running time: `O(1)`
-uncons :: forall a. List a -> Maybe { head :: a, tail :: List a }
-uncons = unconsImpl Just Nothing
-
-foreign import unconsImpl :: forall a b. (b -> Maybe b) -> Maybe b -> List a -> Maybe { head :: a, tail :: List a }
-
+-- | Running time: `O(n)`
+unsnoc :: forall a. List a -> Maybe { init :: List a, last :: a }
+unsnoc lst = (\h -> { init: reverse h.revInit, last: h.last }) <$> go lst nil
+  where
+  go lst' acc = case uncons lst' of
+    Just { head: h, tail: t } | null t -> Just { revInit: acc, last: h }
+    Just { head: h, tail: t } -> go t $ h : acc
+    Nothing -> Nothing
 
 --------------------------------------------------------------------------------
 -- Indexed operations ----------------------------------------------------------
@@ -349,54 +318,27 @@ concatMap f list =
     Nothing -> nil
     Just { head: h, tail: t } -> f h <> concatMap f t
 
--- | Filter a list, keeping the elements which satisfy a predicate function.
+-- | Filter where the predicate returns a monadic `Boolean`.
 -- |
--- | Running time: `O(n)`
-foreign import filter :: forall a. (a -> Boolean) -> List a -> List a
---
--- -- | Filter where the predicate returns a monadic `Boolean`.
--- -- |
--- -- | For example:
--- -- |
--- -- | ```purescript
--- -- | powerSet :: forall a. [a] -> [[a]]
--- -- | powerSet = filterM (const [true, false])
--- -- | ```
--- filterM :: forall a m. Monad m => (a -> m Boolean) -> List a -> m (List a)
--- filterM _ Nil = pure Nil
--- filterM p (Cons x xs) = do
---   b <- p x
---   xs' <- filterM p xs
---   pure if b then Cons x xs' else xs'
---
--- | Apply a function to each element in a list, keeping only the results which
--- | contain a value.
+-- | For example:
 -- |
--- | Running time: `O(n)`
-mapMaybe :: forall a b. (a -> Maybe b) -> List a -> List b
-mapMaybe f = go nil
-  where
-  go acc l = case uncons l of
-    Nothing -> reverse acc
-    Just { head: x, tail: xs } -> 
-      case f x of
-        Nothing -> go acc xs
-        Just y -> go (y : acc) xs
+-- | ```purescript
+-- | powerSet :: forall a. [a] -> [[a]]
+-- | powerSet = filterM (const [true, false])
+-- | ```
+filterM :: forall a m. Monad m => (a -> m Boolean) -> List a -> m (List a)
+filterM p = uncons >>> case _ of
+  Nothing -> pure nil
+  Just { head: x, tail: xs } -> do
+    b <- p x
+    xs' <- filterM p xs
+    pure if b then x : xs' else xs'
 
 -- | Filter a list of optional values, keeping only the elements which contain
 -- | a value.
 catMaybes :: forall a. List (Maybe a) -> List a
-catMaybes = mapMaybe identity
-
-
--- | Apply a function to each element and its index in a list starting at 0.
-mapWithIndex :: forall a b. (a -> Int -> b) -> List a -> List b
-mapWithIndex f lst = reverse $ go 0 lst nil
-  where
-  go n l acc = case uncons l of
-    Nothing -> acc
-    Just { head: x, tail: xs } -> go (n+1) xs $ (f x n) : acc
-      
+catMaybes = filterMap identity
+   
 --------------------------------------------------------------------------------
 -- Sorting ---------------------------------------------------------------------
 --------------------------------------------------------------------------------
@@ -492,7 +434,7 @@ drop :: forall a. Int -> List a -> List a
 drop 0 xs = xs
 drop n l = case uncons l of 
   Nothing -> nil
-  Just { head: x, tail: xs } -> drop (n - 1) xs
+  Just { head: _, tail: xs } -> drop (n - 1) xs
 
 -- | Drop those elements from the front of a list which match a predicate.
 -- |
@@ -504,52 +446,54 @@ dropWhile p = go
        , p x = go xs
   go xs = xs
 
--- -- | Split a list into two parts:
--- -- |
--- -- | 1. the longest initial segment for which all elements satisfy the specified predicate
--- -- | 2. the remaining elements
--- -- |
--- -- | For example,
--- -- |
--- -- | ```purescript
--- -- | span (\n -> n % 2 == 1) (1 : 3 : 2 : 4 : 5 : Nil) == { init: (1 : 3 : Nil), rest: (2 : 4 : 5 : Nil) }
--- -- | ```
--- -- |
--- -- | Running time: `O(n)`
--- span :: forall a. (a -> Boolean) -> List a -> { init :: List a, rest :: List a }
--- span p (Cons x xs') | p x = case span p xs' of
---   { init: ys, rest: zs } -> { init: Cons x ys, rest: zs }
--- span _ xs = { init: Nil, rest: xs }
---
--- -- | Group equal, consecutive elements of a list into lists.
--- -- |
--- -- | For example,
--- -- |
--- -- | ```purescript
--- -- | group (1 : 1 : 2 : 2 : 1 : Nil) == (1 : 1 : Nil) : (2 : 2 : Nil) : (1 : Nil) : Nil
--- -- | ```
--- -- |
--- -- | Running time: `O(n)`
--- group :: forall a. Eq a => List a -> List (List a)
--- group = groupBy (==)
---
--- -- | Sort and then group the elements of a list into lists.
--- -- |
--- -- | ```purescript
--- -- | group' [1,1,2,2,1] == [[1,1,1],[2,2]]
--- -- | ```
--- group' :: forall a. Ord a => List a -> List (List a)
--- group' = group <<< sort
---
--- -- | Group equal, consecutive elements of a list into lists, using the specified
--- -- | equivalence relation to determine equality.
--- -- |
--- -- | Running time: `O(n)`
--- groupBy :: forall a. (a -> a -> Boolean) -> List a -> List (List a)
--- groupBy _ Nil = Nil
--- groupBy eq (Cons x xs) = case span (eq x) xs of
---   { init: ys, rest: zs } -> Cons (Cons x ys) (groupBy eq zs)
---
+-- | Split a list into two parts:
+-- |
+-- | 1. the longest initial segment for which all elements satisfy the specified predicate
+-- | 2. the remaining elements
+-- |
+-- | For example,
+-- |
+-- | ```purescript
+-- | span (\n -> n % 2 == 1) (1 : 3 : 2 : 4 : 5 : Nil) == { init: (1 : 3 : Nil), rest: (2 : 4 : 5 : Nil) }
+-- | ```
+-- |
+-- | Running time: `O(n)`
+span :: forall a. (a -> Boolean) -> List a -> { init :: List a, rest :: List a }
+span p xs = case uncons xs of
+  Just { head: x, tail: xs' } | p x -> case span p xs' of
+    { init: ys, rest: zs } -> { init: x:ys, rest: zs }
+  _ -> { init: nil, rest: xs }
+
+-- | Group equal, consecutive elements of a list into lists.
+-- |
+-- | For example,
+-- |
+-- | ```purescript
+-- | group (1 : 1 : 2 : 2 : 1 : Nil) == (1 : 1 : Nil) : (2 : 2 : Nil) : (1 : Nil) : Nil
+-- | ```
+-- |
+-- | Running time: `O(n)`
+group :: forall a. Eq a => List a -> List (NonEmptyList a)
+group = groupBy (==)
+
+-- | Sort and then group the elements of a list into lists.
+-- |
+-- | ```purescript
+-- | group' [1,1,2,2,1] == [[1,1,1],[2,2]]
+-- | ```
+group' :: forall a. Ord a => List a -> List (NonEmptyList a)
+group' = group <<< sort
+
+-- | Group equal, consecutive elements of a list into lists, using the specified
+-- | equivalence relation to determine equality.
+-- |
+-- | Running time: `O(n)`
+groupBy :: forall a. (a -> a -> Boolean) -> List a -> List (NonEmptyList a)
+groupBy eq = uncons >>> case _ of
+  Nothing -> nil
+  Just { head: x, tail: xs } -> case span (eq x) xs of
+    { init: ys, rest: zs } -> NonEmptyList (x :| ys) : (groupBy eq zs)
+
 --------------------------------------------------------------------------------
 -- Set-like operations ---------------------------------------------------------
 --------------------------------------------------------------------------------
@@ -682,7 +626,7 @@ transpose l = case uncons l of
   Just { head: h0, tail: xss } ->
     case uncons h0 of
       Nothing -> transpose xss
-      Just { head: x, tail: xs } -> (x : mapMaybe head xss) : transpose (xs : mapMaybe tail xss)
+      Just { head: x, tail: xs } -> (x : filterMap head xss) : transpose (xs : filterMap tail xss)
 
 --------------------------------------------------------------------------------
 -- Folding ---------------------------------------------------------------------
@@ -693,159 +637,3 @@ foldM :: forall m a b. Monad m => (a -> b -> m a) -> a -> List b -> m a
 foldM f a l = case uncons l of
   Nothing -> pure a
   Just { head: b, tail: bs } -> f a b >>= \a' -> foldM f a' bs
---
---------------------------------------------------------------------------------
--- Instances -------------------------------------------------------------------
---------------------------------------------------------------------------------
-
-instance showList :: Show a => Show (List a) where
-  show xs | null xs = "nil"
-  show xs = "(" <> intercalate " : " (show <$> xs) <> " : nil)"
-
-instance eqList :: Eq a => Eq (List a) where
-  eq = eq1
-
-instance eq1List :: Eq1 List where
-  eq1 xs ys = go xs ys true
-    where
-      go _ _ false = false
-      go xs' ys' acc =
-        case uncons xs', uncons ys' of
-          Nothing, Nothing -> acc
-          Just { head: x, tail: xs'' }, Just { head: y, tail: ys'' } -> go xs'' ys'' $ acc && (y == x)
-          _, _ -> false
-         
-instance ordList :: Ord a => Ord (List a) where
-  compare = compare1
-
--- Adapted from https://hackage.haskell.org/package/base-4.4.1.0/docs/src/GHC-Classes.html
-instance ord1List :: Ord1 List where
-  compare1 xs ys =
-      case uncons xs, uncons ys of
-         Nothing, Nothing -> EQ
-         Nothing, _       -> LT
-         _, Nothing       -> GT
-         Just { head: x, tail: xs'' }, Just { head: y, tail: ys'' } ->
-           case compare x y of
-             EQ -> compare1 xs'' ys''
-             other -> other
-
-instance semigroupList :: Semigroup (List a) where
-  append = appendImpl
-
-foreign import appendImpl :: forall a. List a -> List a -> List a
-
-instance monoidList :: Monoid (List a) where
-  mempty = nil
-
-instance functorList :: Functor List where
-  map = mapImpl
-
-instance foldableList :: Foldable List where
-  foldr = foldrImpl
-  foldl = foldlImpl
-  foldMap = foldMapDefaultR
-
-foreign import mapImpl :: forall a b. (a -> b) -> List a -> List b
-
-foreign import foldrImpl :: forall a b. (a -> b -> b) -> b -> List a -> b
-
-foreign import foldlImpl :: forall a b. (b -> a -> b) -> b -> List a -> b
-
-instance unfoldable1List :: Unfoldable1 List where
-  unfoldr1 f b = go b nil
-    where
-      go source memo = case f source of
-        Tuple one Nothing -> reverse (cons one memo)
-        Tuple one (Just rest) -> go rest (cons one memo)
-
-instance unfoldableList :: Unfoldable List where
-  unfoldr f b = go b nil
-    where
-      go source memo = case f source of
-        Nothing -> reverse memo
-        Just (Tuple one rest) -> go rest (cons one memo)
-
-instance traversableList :: Traversable List where
-  traverse f lst =
-    case uncons lst of
-      Nothing -> pure nil
-      Just { head: h, tail: t } -> cons <$> f h <*> traverse f t
-  sequence lst =
-    case uncons lst of
-      Nothing -> pure nil
-      Just { head: h, tail: t } -> cons <$> h <*> sequence t
-
-instance traversableWithIndexList :: TraversableWithIndex Int List where
-  traverseWithIndex f lst =
-    traverseWithIndexImpl f lst 0
-      where 
-          traverseWithIndexImpl f lst i = 
-            case uncons lst of
-              Nothing -> pure nil
-              Just { head: h, tail: t } -> cons <$> f i h <*> traverseWithIndexImpl f t (i+1)
-
-instance foldableWithIndexList :: FoldableWithIndex Int List where
-  foldrWithIndex f z lst = foldr (\(Tuple x i) y -> f i x y) z $ mapWithIndex Tuple lst
-  foldlWithIndex f z lst = foldl (\y (Tuple x i) -> f i y x) z $ mapWithIndex Tuple lst
-  foldMapWithIndex f = foldMapWithIndexDefaultR f
-
-instance functorWithIndexList :: FunctorWithIndex Int List where
-  mapWithIndex f = foldrWithIndex (\i x acc -> f i x : acc) nil
-
-instance applyList :: Apply List where
-  apply list xs =
-    case uncons list of
-      Nothing -> nil
-      Just { head: f, tail: fs } -> (f <$> xs) <> (fs <*> xs)
-
-instance applicativeList :: Applicative List where
-  pure a = a : nil
-
-instance bindList :: Bind List where
-  bind = flip concatMap
-
-instance monadList :: Monad List
-
-instance altList :: Alt List where
-  alt = append
-
-instance plusList :: Plus List where
-  empty = nil
-
-instance alternativeList :: Alternative List
-
-instance monadZeroList :: MonadZero List
-
-instance monadPlusList :: MonadPlus List
-
-instance compactableList :: Compactable List where
-  compact = catMaybes
-  separate xs = separateDefault xs
-
-instance filterableList :: Filterable List where
-  partitionMap :: forall a l r. (a -> Either l r) -> List a -> { left :: List l, right :: List r }
-  partitionMap p xs = foldr select { left: nil, right: nil } xs
-      where
-        select x { left, right } = case p x of
-                                     Left l -> { left: l : left, right }
-                                     Right r -> { left, right: r : right }
-  
-  partition :: forall a. (a -> Boolean) -> List a -> { no :: List a, yes :: List a }
-  partition p xs = foldr select { no: nil, yes: nil } xs
-      where
-        -- select :: (a -> Boolean) -> a -> { no :: List a, yes :: List a } -> { no :: List a, yes :: List a }
-        select x { no, yes } = if p x
-                                 then { no, yes: x : yes }
-                                 else { no: x : no, yes }
-
-  
-  filterMap :: forall a b. (a -> Maybe b) -> List a -> List b
-  filterMap = mapMaybe
-
-  filter :: forall a. (a -> Boolean) -> List a -> List a
-  filter = filter
-
-instance witherableList :: Witherable List where
-  wilt = wiltDefault
-  wither = witherDefault

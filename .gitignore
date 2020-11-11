@@ -7,3 +7,4 @@
 /ebin
 .psc-ide-port
 .spago/
+.psc-package/

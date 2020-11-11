@@ -14,7 +14,7 @@ module Erl.Data.List.NonEmpty
   , tail
   , init
   , uncons
-  -- , unsnoc
+  , unsnoc
   , (!!), index
   , elemIndex
   , elemLastIndex
@@ -27,7 +27,7 @@ module Erl.Data.List.NonEmpty
   , concat
   , concatMap
   , filter
-  -- , filterM
+  , filterM
   , mapMaybe
   , catMaybes
   , appendFoldable
@@ -37,11 +37,11 @@ module Erl.Data.List.NonEmpty
   , takeWhile
   , drop
   , dropWhile
-  -- , span
-  -- , group
-  -- , group'
-  -- , groupBy
-  -- , partition
+  , span
+  , group
+  , group'
+  , groupBy
+  , partition
   , nub
   , nubBy
   , union
@@ -49,7 +49,7 @@ module Erl.Data.List.NonEmpty
   , intersect
   , intersectBy
   , zipWith
-  -- , zipWithA
+  , zipWithA
   , zip
   , unzip
   , foldM
@@ -58,9 +58,9 @@ module Erl.Data.List.NonEmpty
 
 import Prelude
 
+import Data.Filterable as Filterable
 import Data.Foldable (class Foldable)
 import Data.Foldable (foldl, foldr, foldMap, fold, intercalate, elem, notElem, find, findMap, any, all) as Exports
-import Data.FunctorWithIndex (mapWithIndex) as FWI
 import Data.Maybe (Maybe(..), fromMaybe, maybe)
 import Data.NonEmpty ((:|))
 import Data.NonEmpty as NE
@@ -73,6 +73,7 @@ import Data.Unfoldable (class Unfoldable, unfoldr)
 import Erl.Data.List ((:))
 import Erl.Data.List as L
 import Erl.Data.List.Types (NonEmptyList(..))
+import Erl.Data.List.Types (NonEmptyList(..)) as Exports
 import Partial.Unsafe (unsafeCrashWith)
 
 -- | Internal function: any operation on a list that is guaranteed not to delete
@@ -154,13 +155,13 @@ init (NonEmptyList (x :| xs)) = maybe L.nil (x : _) (L.init xs)
 uncons :: forall a. NonEmptyList a -> { head :: a, tail :: L.List a }
 uncons (NonEmptyList (x :| xs)) = { head: x, tail: xs }
 
--- unsnoc :: forall a. NonEmptyList a -> { init :: L.List a, last :: a }
--- unsnoc (NonEmptyList (x :| xs)) = case L.unsnoc xs of
---   Nothing -> { init: L.Nil, last: x }
---   Just un -> { init: x : un.init, last: un.last }
+unsnoc :: forall a. NonEmptyList a -> { init :: L.List a, last :: a }
+unsnoc (NonEmptyList (x :| xs)) = case L.unsnoc xs of
+  Nothing -> { init: L.nil, last: x }
+  Just un -> { init: x : un.init, last: un.last }
 
 length :: forall a. NonEmptyList a -> Int
-length (NonEmptyList (x :| xs)) = 1 + L.length xs
+length (NonEmptyList (_ :| xs)) = 1 + L.length xs
 
 index :: forall a. NonEmptyList a -> Int -> Maybe a
 index (NonEmptyList (x :| xs)) i
@@ -206,14 +207,16 @@ modifyAt i f (NonEmptyList (x :| xs))
 reverse :: forall a. NonEmptyList a -> NonEmptyList a
 reverse = wrappedOperation "reverse" L.reverse
 
+-- TODO
 filter :: forall a. (a -> Boolean) -> NonEmptyList a -> L.List a
-filter = lift <<< L.filter
+filter = lift <<< Filterable.filter
 
--- filterM :: forall m a. Monad m => (a -> m Boolean) -> NonEmptyList a -> m (L.List a)
--- filterM = lift <<< L.filterM
+filterM :: forall m a. Monad m => (a -> m Boolean) -> NonEmptyList a -> m (L.List a)
+filterM = lift <<< L.filterM
 
+-- TODO
 mapMaybe :: forall a b. (a -> Maybe b) -> NonEmptyList a -> L.List b
-mapMaybe = lift <<< L.mapMaybe
+mapMaybe = lift <<< Filterable.filterMap
 
 catMaybes :: forall a. NonEmptyList (Maybe a) -> L.List a
 catMaybes = lift L.catMaybes
@@ -246,20 +249,20 @@ drop = lift <<< L.drop
 dropWhile :: forall a. (a -> Boolean) -> NonEmptyList a -> L.List a
 dropWhile = lift <<< L.dropWhile
 
--- span :: forall a. (a -> Boolean) -> NonEmptyList a -> { init :: L.List a, rest :: L.List a }
--- span = lift <<< L.span
+span :: forall a. (a -> Boolean) -> NonEmptyList a -> { init :: L.List a, rest :: L.List a }
+span = lift <<< L.span
 
--- group :: forall a. Eq a => NonEmptyList a -> NonEmptyList (NonEmptyList a)
--- group = wrappedOperation "group" L.group
+group :: forall a. Eq a => NonEmptyList a -> NonEmptyList (NonEmptyList a)
+group = wrappedOperation "group" L.group
 
--- group' :: forall a. Ord a => NonEmptyList a -> NonEmptyList (NonEmptyList a)
--- group' = wrappedOperation "group'" L.group'
+group' :: forall a. Ord a => NonEmptyList a -> NonEmptyList (NonEmptyList a)
+group' = wrappedOperation "group'" L.group'
 
--- groupBy :: forall a. (a -> a -> Boolean) -> NonEmptyList a -> NonEmptyList (NonEmptyList a)
--- groupBy = wrappedOperation "groupBy" <<< L.groupBy
+groupBy :: forall a. (a -> a -> Boolean) -> NonEmptyList a -> NonEmptyList (NonEmptyList a)
+groupBy = wrappedOperation "groupBy" <<< L.groupBy
 
--- partition :: forall a. (a -> Boolean) -> NonEmptyList a -> { yes :: L.List a, no :: L.List a }
--- partition = lift <<< L.partition
+partition :: forall a. (a -> Boolean) -> NonEmptyList a -> { yes :: L.List a, no :: L.List a }
+partition = lift <<< Filterable.partition
 
 nub :: forall a. Eq a => NonEmptyList a -> NonEmptyList a
 nub = wrappedOperation "nub" L.nub
@@ -283,8 +286,8 @@ zipWith :: forall a b c. (a -> b -> c) -> NonEmptyList a -> NonEmptyList b -> No
 zipWith f (NonEmptyList (x :| xs)) (NonEmptyList (y :| ys)) =
   NonEmptyList (f x y :| L.zipWith f xs ys)
 
--- zipWithA :: forall m a b c. Applicative m => (a -> b -> m c) -> NonEmptyList a -> NonEmptyList b -> m (NonEmptyList c)
--- zipWithA f xs ys = sequence1 (zipWith f xs ys)
+zipWithA :: forall m a b c. Applicative m => (a -> b -> m c) -> NonEmptyList a -> NonEmptyList b -> m (NonEmptyList c)
+zipWithA f xs ys = sequence1 (zipWith f xs ys)
 
 zip :: forall a b. NonEmptyList a -> NonEmptyList b -> NonEmptyList (Tuple a b)
 zip = zipWith Tuple

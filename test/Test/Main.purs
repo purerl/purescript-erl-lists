@@ -1,21 +1,24 @@
 module Test.Main where
 
+import Erl.Data.List
 import Prelude
 
 import Data.Either (Either(..))
-import Data.Filterable (filterMap, partition, partitionMap, separate)
+import Data.Filterable (filter, filterMap, partition, partitionMap, separate)
 import Data.Foldable (foldMap, foldl)
+import Data.FunctorWithIndex (mapWithIndex)
 import Data.Identity (Identity(..))
 import Data.Maybe (Maybe(..), fromJust, isNothing, maybe)
 import Data.Monoid.Additive (Additive(..))
+import Data.NonEmpty ((:|))
+import Data.Traversable (traverse)
+import Data.TraversableWithIndex (traverseWithIndex)
 import Data.Tuple (Tuple(..))
 import Data.Unfoldable (replicateA, replicate, unfoldr)
 import Data.Witherable (wilt, wither)
 import Effect (Effect)
 import Effect.Console (log)
-import Data.Traversable (traverse)
-import Data.TraversableWithIndex (traverseWithIndex)
-import Erl.Data.List (List, alterAt, catMaybes, concat, concatMap, cons, delete, deleteAt, deleteBy, drop, dropWhile, elemIndex, elemLastIndex, filter, findIndex, findLastIndex, foldM, fromFoldable, head, init, insert, insertAt, insertBy, intersect, intersectBy, last, length, mapMaybe, mapWithIndex, modifyAt, nil, nub, nubBy, null, range, reverse, singleton, snoc, sort, sortBy, tail, take, takeWhile, transpose, uncons, union, unionBy, unzip, updateAt, zip, zipWith, zipWithA, (!!), (..), (:), (\\))
+import Erl.Data.List.NonEmpty as NEL
 import Partial.Unsafe (unsafePartial)
 import Test.Assert (assert)
 
@@ -135,6 +138,18 @@ testList = do
   assert $ unsafePartial (fromJust u2).head == 1
   assert $ unsafePartial (fromJust u2).tail == l [2, 3]
   
+  log "unsnoc should return nothing when used on an empty list"
+  assert $ isNothing (unsnoc nil)
+
+  log "unsnoc should split an list into an init and last record when there is at least one item"
+  let v1 = unsnoc (l [1])
+  assert $ unsafePartial (fromJust v1).init == l []
+  assert $ unsafePartial (fromJust v1).last == 1
+  let v2 = unsnoc (l [1, 2, 3])
+  assert $ unsafePartial (fromJust v2).init == l [1, 2]
+  assert $ unsafePartial (fromJust v2).last == 3
+
+
   log "(!!) should return Just x when the index is within the bounds of the list"
   assert $ l [1, 2, 3] !! 0 == (Just 1)
   assert $ l [1, 2, 3] !! 1 == (Just 2)
@@ -214,13 +229,13 @@ testList = do
 
   log "filter should remove items that don't match a predicate"
   assert $ filter odd (range 0 10) == l [1, 3, 5, 7, 9]
-  --
-  -- log "filterM should remove items that don't match a predicate while using a monadic behaviour"
-  -- assert $ filterM (Just <<< odd) (range 0 10) == Just (l [1, 3, 5, 7, 9])
-  -- assert $ filterM (const Nothing) (range 0 10) == Nothing
-  --
+  
+  log "filterM should remove items that don't match a predicate while using a monadic behaviour"
+  assert $ filterM (Just <<< odd) (range 0 10) == Just (l [1, 3, 5, 7, 9])
+  assert $ filterM (const Nothing) (range 0 10) == Nothing
+  
   log "mapMaybe should transform every item in an list, throwing out Nothing values"
-  assert $ mapMaybe (\x -> if x /= 0 then Just x else Nothing) (l [0, 1, 0, 0, 2, 3]) == l [1, 2, 3]
+  assert $ filterMap (\x -> if x /= 0 then Just x else Nothing) (l [0, 1, 0, 0, 2, 3]) == l [1, 2, 3]
   
   log "catMaybe should take an list of Maybe values and throw out Nothings"
   assert $ catMaybes (l [Nothing, Just 2, Nothing, Just 4]) == l [2, 4]
@@ -253,21 +268,21 @@ testList = do
   assert $ (dropWhile (_ /= 1) (l [1, 2, 3])) == l [1, 2, 3]
   assert $ (dropWhile (_ /= 2) (l [1, 2, 3])) == l [2, 3]
   assert $ (dropWhile (_ /= 1) nil) == (nil :: List Int)
-  --
-  -- log "span should split an list in two based on a predicate"
-  -- let spanResult = span (_ < 4) (l [1, 2, 3, 4, 5, 6, 7])
-  -- assert $ spanResult.init == l [1, 2, 3]
-  -- assert $ spanResult.rest == l [4, 5, 6, 7]
-  --
-  -- log "group should group consecutive equal elements into lists"
-  -- assert $ group (l [1, 2, 2, 3, 3, 3, 1]) == l [l [1], l [2, 2], l [3, 3, 3], l [1]]
-  --
-  -- log "group' should sort then group consecutive equal elements into lists"
-  -- assert $ group' (l [1, 2, 2, 3, 3, 3, 1]) == l [l [1, 1], l [2, 2], l [3, 3, 3]]
-  --
-  -- log "groupBy should group consecutive equal elements into lists based on an equivalence relation"
-  -- assert $ groupBy (\x y -> odd x && odd y) (l [1, 1, 2, 2, 3, 3]) == l [l [1, 1], l [2], l [2], l [3, 3]]
-  --
+  
+  log "span should split an list in two based on a predicate"
+  let spanResult = span (_ < 4) (l [1, 2, 3, 4, 5, 6, 7])
+  assert $ spanResult.init == l [1, 2, 3]
+  assert $ spanResult.rest == l [4, 5, 6, 7]
+  
+  log "group should group consecutive equal elements into lists"
+  assert $ group (l [1, 2, 2, 3, 3, 3, 1]) == l [NEL.singleton 1, NEL.NonEmptyList (2 :| l [2]), NEL.NonEmptyList (3 :| l [3, 3]), NEL.singleton 1]
+
+  log "group' should sort then group consecutive equal elements into lists"
+  assert $ group' (l [1, 2, 2, 3, 3, 3, 1]) == l [NEL.NonEmptyList (1 :| l [1]), NEL.NonEmptyList (2 :| l [2]), NEL.NonEmptyList (3 :| l [3, 3])]
+
+  log "groupBy should group consecutive equal elements into lists based on an equivalence relation"
+  assert $ groupBy (\x y -> odd x && odd y) (l [1, 1, 2, 2, 3, 3]) == l [NEL.NonEmptyList (1 :| l [1]), NEL.singleton 2, NEL.singleton 2, NEL.NonEmptyList (3 :| l [3])]
+  
   log "nub should remove duplicate elements from the list, keeping the first occurence"
   assert $ nub (l [1, 2, 2, 3, 4, 1]) == l [1, 2, 3, 4]
   
