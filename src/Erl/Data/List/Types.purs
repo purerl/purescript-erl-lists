@@ -21,6 +21,7 @@ import Data.Compactable (separateDefault)
 import Data.Either (Either(..))
 import Data.Eq (class Eq1, eq1)
 import Data.Filterable (class Compactable, class Filterable)
+import Data.Filterable as Filterable
 import Data.Foldable (class Foldable, foldMapDefaultR, foldl, foldr, intercalate)
 import Data.FoldableWithIndex (class FoldableWithIndex, foldMapWithIndex, foldlWithIndex, foldMapWithIndexDefaultR, foldrWithIndex)
 import Data.FunctorWithIndex (class FunctorWithIndex, mapWithIndex)

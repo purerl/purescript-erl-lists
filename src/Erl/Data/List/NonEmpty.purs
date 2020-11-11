@@ -28,7 +28,7 @@ module Erl.Data.List.NonEmpty
   , concatMap
   , filter
   , filterM
-  , mapMaybe
+  , filterMap
   , catMaybes
   , appendFoldable
   , sort
@@ -207,16 +207,14 @@ modifyAt i f (NonEmptyList (x :| xs))
 reverse :: forall a. NonEmptyList a -> NonEmptyList a
 reverse = wrappedOperation "reverse" L.reverse
 
--- TODO
 filter :: forall a. (a -> Boolean) -> NonEmptyList a -> L.List a
 filter = lift <<< Filterable.filter
 
 filterM :: forall m a. Monad m => (a -> m Boolean) -> NonEmptyList a -> m (L.List a)
 filterM = lift <<< L.filterM
 
--- TODO
-mapMaybe :: forall a b. (a -> Maybe b) -> NonEmptyList a -> L.List b
-mapMaybe = lift <<< Filterable.filterMap
+filterMap :: forall a b. (a -> Maybe b) -> NonEmptyList a -> L.List b
+filterMap = lift <<< Filterable.filterMap
 
 catMaybes :: forall a. NonEmptyList (Maybe a) -> L.List a
 catMaybes = lift L.catMaybes

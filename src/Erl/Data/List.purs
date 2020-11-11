@@ -1,5 +1,6 @@
 module Erl.Data.List
   ( module Erl.Data.List.Types
+  , module Exports
   , toUnfoldable
   , fromFoldable
   , singleton
@@ -64,7 +65,9 @@ module Erl.Data.List
 import Prelude
 
 import Data.Filterable (filter, filterMap)
+import Data.Filterable (filter, filterMap) as Exports
 import Data.Foldable (class Foldable, any, foldl, foldr)
+import Data.FunctorWithIndex (mapWithIndex) as Exports
 import Data.Maybe (Maybe(..))
 import Data.NonEmpty ((:|))
 import Data.Traversable (sequence)
