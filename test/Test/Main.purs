@@ -1,12 +1,10 @@
 module Test.Main where
 
-import Erl.Data.List
 import Prelude
 
 import Data.Either (Either(..))
-import Data.Filterable (filter, filterMap, partition, partitionMap, separate)
+import Data.Filterable (partition, partitionMap, separate)
 import Data.Foldable (foldMap, foldl)
-import Data.FunctorWithIndex (mapWithIndex)
 import Data.Identity (Identity(..))
 import Data.Maybe (Maybe(..), fromJust, isNothing, maybe)
 import Data.Monoid.Additive (Additive(..))
@@ -18,6 +16,7 @@ import Data.Unfoldable (replicateA, replicate, unfoldr)
 import Data.Witherable (wilt, wither)
 import Effect (Effect)
 import Effect.Console (log)
+import Erl.Data.List (List, alterAt, catMaybes, concat, concatMap, cons, delete, deleteAt, deleteBy, drop, dropWhile, elemIndex, elemLastIndex, filter, filterM, filterMap, findIndex, findLastIndex, foldM, fromFoldable, group, group', groupBy, head, init, insert, insertAt, insertBy, intersect, intersectBy, last, length, mapWithIndex, modifyAt, nil, nub, nubBy, null, range, reverse, singleton, snoc, sort, sortBy, span, tail, take, takeWhile, transpose, uncons, union, unionBy, unsnoc, unzip, updateAt, zip, zipWith, zipWithA, (!!), (..), (:), (\\))
 import Erl.Data.List.NonEmpty as NEL
 import Partial.Unsafe (unsafePartial)
 import Test.Assert (assert)
@@ -393,8 +392,8 @@ testList = do
     assert $ (partitionMap Left $ (1 : 2 : 3 : 4 : 5 : nil)).left == (1 : 2 : 3 : 4 : 5 : nil)
 
   log "Test compactableList instance" *> do
-    let testList = (Left 1 : Right 2 : Left 3 : Right 4 : Left 5 : Right 6 : Left 7 : Right 8 : nil)
-    let parts = separate testList
+    let testList1 = (Left 1 : Right 2 : Left 3 : Right 4 : Left 5 : Right 6 : Left 7 : Right 8 : nil)
+    let parts = separate testList1
     assert $ parts.left == (1 : 3 : 5 : 7 : nil)
     assert $ parts.right == (2 : 4 : 6 : 8 : nil)
 

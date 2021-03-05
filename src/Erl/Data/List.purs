@@ -358,8 +358,8 @@ sortBy cmp = mergeAll <<< sequences
   where
   sequences :: List a -> List (List a)
   sequences xs0 
-    | Just { head: a, tail } <- uncons xs0
-    , Just { head: b, tail: xs } <- uncons tail =
+    | Just { head: a, tail: xs1 } <- uncons xs0
+    , Just { head: b, tail: xs } <- uncons xs1 =
       case a `cmp` b of
         GT -> descending b (singleton a) xs
         _ -> ascending b (a : _) xs
@@ -379,14 +379,14 @@ sortBy cmp = mergeAll <<< sequences
 
   mergeAll :: List (List a) -> List a
   mergeAll xs
-    | Just { head: x, tail } <- uncons xs
-    , null tail = x
+    | Just { head: x, tail: xs0 } <- uncons xs
+    , null xs0 = x
   mergeAll xs = mergeAll (mergePairs xs)
 
   mergePairs :: List (List a) -> List (List a)
   mergePairs xs0 
-    | Just { head: a, tail } <- uncons xs0
-    , Just { head: b, tail: xs} <- uncons tail =
+    | Just { head: a, tail: xs1 } <- uncons xs0
+    , Just { head: b, tail: xs} <- uncons xs1 =
         mergeBy cmp a b : mergePairs xs
   mergePairs xs = xs
 
