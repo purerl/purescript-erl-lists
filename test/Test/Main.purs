@@ -262,6 +262,7 @@ testList = do
   assert $ (drop 1 (l [1, 2, 3])) == l [2, 3]
   assert $ (drop 2 (l [1, 2, 3])) == l [3]
   assert $ (drop 1 nil) == (nil :: List Int)
+  assert $ (drop (-1) (l [1, 2, 3])) == l [ 1, 2, 3]
   
   log "dropWhile should remove all values that match a predicate from the front of an list"
   assert $ (dropWhile (_ /= 1) (l [1, 2, 3])) == l [1, 2, 3]

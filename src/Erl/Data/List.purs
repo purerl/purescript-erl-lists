@@ -434,7 +434,7 @@ takeWhile p = go nil
 -- |
 -- | Running time: `O(n)` where `n` is the number of elements to drop.
 drop :: forall a. Int -> List a -> List a
-drop 0 xs = xs
+drop n xs | n <= 0 = xs
 drop n l = case uncons l of 
   Nothing -> nil
   Just { head: _, tail: xs } -> drop (n - 1) xs
